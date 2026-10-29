@@ -47,7 +47,7 @@ fun ProductosView(
     viewModel: StockViewModel = viewModel()
 ) {
     // Estado del formulario y lista de productos que vienen del ViewModel
-    val formulario by viewModel.formulario.collectAsState()
+    val estado by viewModel.uiState.collectAsState()
     val productos by viewModel.productos.collectAsState()
 
     // Texto del buscador (solo afecta a esta pantalla, por eso vive aquí)
@@ -76,33 +76,33 @@ fun ProductosView(
 
         // Campo para el nombre, con validación
         ValidatedTextField(
-            value = formulario.nombre,
-            onValueChange = { viewModel.onNombreChange(it) },
+            value = estado.nombre,
+            onValueChange = viewModel::onNombreChange,
             label = "Nombre del producto",
-            isError = formulario.nombreError != null,
-            supportingText = formulario.nombreError
+            isError = estado.nombreError != null,
+            supportingText = estado.nombreError
         )
 
         // Campo para el precio, con validación
         ValidatedTextField(
-            value = formulario.precio,
-            onValueChange = { viewModel.onPrecioChange(it) },
+            value = estado.precio,
+            onValueChange = viewModel::onPrecioChange,
             label = "Precio",
-            isError = formulario.precioError != null,
-            supportingText = formulario.precioError
+            isError = estado.precioError != null,
+            supportingText = estado.precioError
         )
 
         // Campo para el stock, con validación
         ValidatedTextField(
-            value = formulario.stock,
-            onValueChange = { viewModel.onStockChange(it) },
+            value = estado.stock,
+            onValueChange = viewModel::onStockChange,
             label = "Stock",
-            isError = formulario.stockError != null,
-            supportingText = formulario.stockError
+            isError = estado.stockError != null,
+            supportingText = estado.stockError
         )
 
         Button(
-            onClick = { viewModel.agregar() },
+            onClick = viewModel::agregar,
             modifier = Modifier.fillMaxWidth()
         ) {
             Text(text = "Agregar")
