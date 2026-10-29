@@ -8,8 +8,8 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Scaffold
 import androidx.compose.ui.Modifier
+import com.bexai.multitienda.ui.navigation.AppNavHost
 import com.bexai.multitienda.ui.theme.MultiTiendaTheme
-import com.bexai.multitienda.ui.view.ProductosView
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -18,8 +18,8 @@ class MainActivity : ComponentActivity() {
         setContent {
             MultiTiendaTheme {
                 Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
-                    // Pantalla principal de la app
-                    ProductosView(modifier = Modifier.padding(innerPadding))
+                    // La navegación decide qué pantalla se muestra
+                    AppNavHost(modifier = Modifier.padding(innerPadding))
                 }
             }
         }

@@ -10,6 +10,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.Button
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -44,7 +45,8 @@ import com.bexai.multitienda.viewmodel.StockViewModel
 @Composable
 fun ProductosView(
     modifier: Modifier = Modifier,
-    viewModel: StockViewModel = viewModel()
+    viewModel: StockViewModel = viewModel(),
+    onVolver: (() -> Unit)? = null
 ) {
     // Estado del formulario y lista de productos que vienen del ViewModel
     val estado by viewModel.uiState.collectAsState()
@@ -69,6 +71,14 @@ fun ProductosView(
         // Separación entre cada elemento
         verticalArrangement = Arrangement.spacedBy(8.dp)
     ) {
+        // Si la pantalla se abrió desde la navegación, muestra un botón para volver
+        val volver = onVolver
+        if (volver != null) {
+            TextButton(onClick = volver) {
+                Text(text = "← Volver")
+            }
+        }
+
         Text(
             text = "Agregar producto",
             style = MaterialTheme.typography.titleLarge
