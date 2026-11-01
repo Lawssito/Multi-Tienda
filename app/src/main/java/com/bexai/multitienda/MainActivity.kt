@@ -7,10 +7,8 @@ import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Text
-import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.tooling.preview.Preview
+import com.bexai.multitienda.ui.navigation.AppNavHost
 import com.bexai.multitienda.ui.theme.MultiTiendaTheme
 import com.bexai.multitienda.ui.view.LoginView
 
@@ -20,7 +18,10 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
         setContent {
             MultiTiendaTheme {
-                LoginView()
+                Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
+                    // La navegación decide qué pantalla se muestra
+                    AppNavHost(modifier = Modifier.padding(innerPadding))
+                }
             }
         }
     }
