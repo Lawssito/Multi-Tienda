@@ -13,8 +13,8 @@ class StockRepository {
 
     // Lista de productos (datos de ejemplo para iniciar)
     private val productos = mutableListOf(
-        Producto(id = 1, nombre = "Leche entera 1 L", precio = 4500.0, stock = 24),
-        Producto(id = 2, nombre = "Pan tajado", precio = 6200.0, stock = 0)
+        Producto(id = 1, nombre = "Leche entera 1 L", stock = 24),
+        Producto(id = 2, nombre = "Pan tajado", stock = 0)
     )
 
     /**

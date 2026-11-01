@@ -93,15 +93,6 @@ fun ProductosView(
             supportingText = estado.nombreError
         )
 
-        // Campo para el precio, con validación
-        ValidatedTextField(
-            value = estado.precio,
-            onValueChange = viewModel::onPrecioChange,
-            label = "Precio",
-            isError = estado.precioError != null,
-            supportingText = estado.precioError
-        )
-
         // Campo para el stock, con validación
         ValidatedTextField(
             value = estado.stock,
@@ -149,7 +140,6 @@ fun ProductosView(
             items(productosFiltrados, key = { it.id }) { producto ->
                 ProductRow(
                     name = producto.nombre,
-                    price = producto.precio,
                     stock = producto.stock,
                     onLongPress = { productoAEliminar = producto }
                 )

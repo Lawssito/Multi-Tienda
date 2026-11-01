@@ -43,13 +43,6 @@ class StockViewModel : ViewModel() {
     }
 
     /**
-     * Se ejecuta cada vez que el usuario escribe el precio.
-     */
-    fun onPrecioChange(precio: String) {
-        _uiState.update { it.copy(precio = precio, precioError = null) }
-    }
-
-    /**
      * Se ejecuta cada vez que el usuario escribe el stock.
      */
     fun onStockChange(stock: String) {
@@ -69,8 +62,6 @@ class StockViewModel : ViewModel() {
 
         // Se revisa cada campo
         val nombreValido = estado.nombre.trim().length >= 5
-        val precioNumero = estado.precio.toDoubleOrNull()
-        val precioValido = precioNumero != null && precioNumero > 0
         val stockNumero = estado.stock.toIntOrNull()
         val stockValido = stockNumero != null && stockNumero >= 0
 
@@ -78,17 +69,15 @@ class StockViewModel : ViewModel() {
         _uiState.update {
             it.copy(
                 nombreError = if (nombreValido) null else "El nombre debe tener mínimo 5 caracteres",
-                precioError = if (precioValido) null else "Ingresa un precio mayor que 0",
                 stockError = if (stockValido) null else "Ingresa un stock de 0 o más"
             )
         }
 
         // Si todo está bien, se guarda el producto y se limpia el formulario
-        if (nombreValido && precioValido && stockValido) {
+        if (nombreValido && stockValido) {
             repository.agregar(
                 Producto(
                     nombre = estado.nombre.trim(),
-                    precio = precioNumero!!,
                     stock = stockNumero!!
                 )
             )

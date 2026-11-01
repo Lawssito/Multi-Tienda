@@ -30,7 +30,6 @@ import kotlinx.coroutines.withTimeoutOrNull
 @Composable
 fun ProductRow(
     name: String,              // Nombre del producto
-    price: Double,             // Precio del producto
     stock: Int,                // Cantidad de unidades disponibles
     onLongPress: () -> Unit = {} // Acción al mantener presionado 3 segundos
 ) {
@@ -41,7 +40,7 @@ fun ProductRow(
                 // detectTapGestures permite saber cuándo se presiona y suelta
                 detectTapGestures(
                     onPress = {
-                        // Espera máximo 3 segundos a que el usuario suelte
+                        // Espera máximo 1 segundos a que el usuario suelte
                         val resultado = withTimeoutOrNull(1000L) {
                             tryAwaitRelease()
                         }
@@ -68,10 +67,6 @@ fun ProductRow(
                     text = name,
                     style = MaterialTheme.typography.titleMedium
                 )
-                Text(
-                    text = "Precio: $price",
-                    style = MaterialTheme.typography.bodyMedium
-                )
             }
             // Texto derecho: existencias disponibles o aviso de que no hay
             Text(
@@ -91,7 +86,6 @@ fun ProductRowPreview() {
     MultiTiendaTheme {
         ProductRow(
             name = "Leche entera 1 L",
-            price = 4500.0,
             stock = 24
         )
     }

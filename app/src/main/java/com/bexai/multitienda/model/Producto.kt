@@ -18,6 +18,5 @@ data class Producto(
     @PrimaryKey(autoGenerate = true)
     val id: Int = 0,    // Identificador único del producto
     val nombre: String, // Nombre del producto
-    val precio: Double, // Precio unitario
     val stock: Int      // Unidades disponibles
 )
