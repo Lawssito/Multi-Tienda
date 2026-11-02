@@ -6,7 +6,7 @@ import com.bexai.multitienda.model.Usuario
 class UsuarioRepository {
     private val usuarios = listOf(
         Usuario(1,"Operador Demo",
-            "operador@stockmulti.com","opedemo123", Rol.OPERDADOR),
+            "operador@stockmulti.com","opedemo123", Rol.OPERADOR),
         Usuario(2,"Encargado Demo",
             "encargado@stockmulti.com","opedemo123", Rol.ENCARGADO),
         Usuario(3,"Gerencia Demo",

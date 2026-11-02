@@ -12,20 +12,24 @@ package com.bexai.multitienda.ui.navigation
  */
 sealed class Ruta(val ruta: String) {
 
-    // Pantalla inicial (login). La completa la Persona A.
+    // Pantalla inicial (login).
     data object Login : Ruta("login")
 
     // Pantallas del grafo de operador (las completa la Persona A).
     data object OperadorInicio : Ruta("operador/inicio")
     data object OperadorProductos : Ruta("operador/productos")
 
-    // Pantallas del grafo de gestión.
-    data object GestionInicio : Ruta("gestion/inicio")
-    data object GestionReportes : Ruta("gestion/reportes")
+    // Pantalla del grafo de encargado
+    data object EncargadoInicio : Ruta("encargado/inicio")
+
+    // Pantallas del grafo de gerencia.
+    data object GerenciaInicio : Ruta("gerencia/inicio")
+    data object GerenciaReportes : Ruta("gerencia/reportes")
 
     companion object {
         // Nombre interno de cada grafo (se usa en AppNavHost)
         const val GRAFO_OPERADOR = "grafo_operador"
-        const val GRAFO_GESTION = "grafo_gestion"
+        const val GRAFO_ENCARGADO = "grafo_encargado"
+        const val GRAFO_GERENCIA = "grafo_gerencia"
     }
 }

@@ -9,8 +9,10 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.navigation
 import androidx.navigation.compose.rememberNavController
+import com.bexai.multitienda.model.Rol
 import com.bexai.multitienda.ui.theme.MultiTiendaTheme
 import com.bexai.multitienda.ui.view.AccionPantalla
+import com.bexai.multitienda.ui.view.LoginView
 import com.bexai.multitienda.ui.view.PantallaVacia
 import com.bexai.multitienda.ui.view.ProductosView
 
@@ -37,27 +39,18 @@ fun AppNavHost(
     ) {
         // ---------- LOGIN ----------
         composable(Ruta.Login.ruta) {
-            PantallaVacia(
-                titulo = "Iniciar sesión",
-                descripcion = "Pantalla de login. La completa la Persona A.",
-                acciones = listOf(
-                    AccionPantalla(
-                        texto = "Entrar como operador",
-                        alHacerClic = {
-                            navController.navigate(Ruta.GRAFO_OPERADOR) {
-                                launchSingleTop = true
-                            }
-                        }
-                    ),
-                    AccionPantalla(
-                        texto = "Entrar como gestión",
-                        alHacerClic = {
-                            navController.navigate(Ruta.GRAFO_GESTION) {
-                                launchSingleTop = true
-                            }
-                        }
-                    )
-                )
+            LoginView(
+                onLoginExitoso = { rol ->
+                    val destino = when (rol) {
+                        Rol.OPERADOR -> Ruta.GRAFO_OPERADOR
+                        Rol.ENCARGADO -> Ruta.GRAFO_ENCARGADO
+                        Rol.GERENCIA -> Ruta.GRAFO_GERENCIA
+                    }
+                    navController.navigate(destino){
+                        popUpTo(Ruta.Login.ruta) { inclusive = true }
+                        launchSingleTop = true
+                    }
+                }
             )
         }
 
@@ -81,7 +74,9 @@ fun AppNavHost(
                         AccionPantalla(
                             texto = "Volver al login",
                             alHacerClic = {
-                                navController.popBackStack(Ruta.Login.ruta, false)
+                                navController.navigate(Ruta.Login.ruta) {
+                                    popUpTo(navController.graph.id) { inclusive = true }
+                                }
                             }
                         )
                     )
@@ -97,12 +92,37 @@ fun AppNavHost(
             }
         }
 
-        // ---------- GRAFO DE GESTIÓN ----------
+        // ---------- GRAFO DE ENCARGADO ----------
         navigation(
-            startDestination = Ruta.GestionInicio.ruta,
-            route = Ruta.GRAFO_GESTION
+            startDestination = Ruta.EncargadoInicio.ruta,
+            route = Ruta.GRAFO_ENCARGADO
+        )
+        {
+            composable(Ruta.EncargadoInicio.ruta)
+            {
+                PantallaVacia(
+                    titulo = "Inicio Encargado",
+                    descripcion = "Grafo de encargado.",
+                    acciones = listOf(
+                        AccionPantalla(
+                            texto = "Volever al login",
+                            alHacerClic = {
+                                navController.navigate(Ruta.Login.ruta) {
+                                    popUpTo(navController.graph.id) { inclusive = true }
+                                }
+                            }
+                        )
+                    )
+                )
+            }
+        }
+
+        // ---------- GRAFO DE GERENCIA ----------
+        navigation(
+            startDestination = Ruta.GerenciaInicio.ruta,
+            route = Ruta.GRAFO_GERENCIA
         ) {
-            composable(Ruta.GestionInicio.ruta) {
+            composable(Ruta.GerenciaInicio.ruta) {
                 PantallaVacia(
                     titulo = "Inicio gestión",
                     descripcion = "Grafo de gestión. Pantalla vacía de prueba.",
@@ -110,20 +130,22 @@ fun AppNavHost(
                         AccionPantalla(
                             texto = "Ir a reportes",
                             alHacerClic = {
-                                navController.navigate(Ruta.GestionReportes.ruta)
+                                navController.navigate(Ruta.GerenciaInicio.ruta)
                             }
                         ),
                         AccionPantalla(
                             texto = "Volver al login",
                             alHacerClic = {
-                                navController.popBackStack(Ruta.Login.ruta, false)
+                                navController.navigate(Ruta.Login.ruta) {
+                                    popUpTo(navController.graph.id) { inclusive = true }
+                                }
                             }
                         )
                     )
                 )
             }
 
-            composable(Ruta.GestionReportes.ruta) {
+            composable(Ruta.GerenciaReportes.ruta) {
                 PantallaVacia(
                     titulo = "Reportes",
                     descripcion = "Pantalla vacía de reportes para probar la navegación.",
