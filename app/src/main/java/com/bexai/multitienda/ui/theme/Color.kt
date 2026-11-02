@@ -23,3 +23,8 @@ val Peligro = Color(0xFFB91C1C)
 val PeligroSuave = Color(0xFFFEE2E2)
 val Exito = Color(0xFF15803D)
 val ExitoSuave = Color(0xFFE7F7EF)
+
+// Barra de navegacion
+val BarraFondo = Color(0xFF0F172A)
+val Celeste = Color(0xFF93E2FF)
+val GrisBarra = Color(0xFFB8C4BE)

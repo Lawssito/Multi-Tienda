@@ -66,4 +66,5 @@ dependencies {
     implementation(libs.compose.viewmodel) // Permite usar 'viewModel()' en Compose
     // --- ICONOS EXTENDIDOS DE MATERIAL ---
     implementation(libs.compose.icons.extended)
+    implementation(libs.androidx.compose.material.icons.extended)
 }
