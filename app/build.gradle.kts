@@ -11,9 +11,7 @@ android {
     compileSdk {
         version = release(37)
     }
-    room {
-        schemaDirectory("$projectDir/schemas")
-    }
+
     defaultConfig {
         applicationId = "com.bexai.multitienda"
         minSdk = 24
@@ -39,6 +37,10 @@ android {
     buildFeatures {
         compose = true
     }
+}
+
+room {
+    schemaDirectory("$projectDir/schemas")
 }
 
 dependencies {

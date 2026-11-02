@@ -6,8 +6,10 @@ import androidx.navigation.NavGraphBuilder
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.composable
 import androidx.navigation.navigation
+import com.bexai.multitienda.model.ResumenDia
 import com.bexai.multitienda.ui.view.AccionPantalla
 import com.bexai.multitienda.ui.view.PantallaVacia
+import com.bexai.multitienda.ui.view.operador.InicioOperadorView
 
 fun NavGraphBuilder.operadorNavGraph(navController: NavHostController) {
     navigation(
@@ -16,9 +18,12 @@ fun NavGraphBuilder.operadorNavGraph(navController: NavHostController) {
     ) {
         composable(Ruta.OperadorInicio.ruta) {
             ConBarraOperador(navController) { padding ->
-                PantallaVacia(
-                    titulo = "Inicio operador",
-                    descripcion = "Aquí irá el resumen del día y los movimientos.",
+                InicioOperadorView(
+                    sucursal = "Tienda Centro",
+                    fecha = "29 sept",
+                    resumen = ResumenDia(entradas = 214, salidas = 96, movimientos = 24, contados = 120),
+                    onMovimiento = {},
+                    onConteoMasivo = {},
                     modifier = Modifier.padding(padding)
                 )
             }
