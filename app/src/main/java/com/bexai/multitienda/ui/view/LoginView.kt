@@ -16,8 +16,6 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CloudQueue
-import androidx.compose.material.icons.filled.Lock
-import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.Button
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -25,6 +23,7 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
@@ -35,14 +34,22 @@ import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.bexai.multitienda.model.Rol
 import com.bexai.multitienda.ui.theme.Azul
 import com.bexai.multitienda.ui.theme.Borde
 import com.bexai.multitienda.ui.theme.Superficie
 import com.bexai.multitienda.viewmodel.LoginViewModel
 
 @Composable
-fun LoginView(viewModel: LoginViewModel = viewModel()) {
+fun LoginView(
+    onLoginExitoso:(Rol)-> Unit,
+    viewModel: LoginViewModel = viewModel()
+) {
     val estado by viewModel.uiState.collectAsState()
+
+    LaunchedEffect(estado.usuarioAutenticado){
+        estado.usuarioAutenticado?.let { onLoginExitoso(it.rol)}
+    }
 
     val colorCampo = OutlinedTextFieldDefaults.colors(
         focusedContainerColor = Superficie,
@@ -133,10 +140,6 @@ fun LoginView(viewModel: LoginViewModel = viewModel()) {
                 shape = RoundedCornerShape(18.dp),
                 modifier = Modifier.fillMaxWidth().height(58.dp)) {
                 Text("Iniciar sesión", fontSize = 17.sp, fontWeight = FontWeight.Bold)
-            }
-
-            estado.usuarioAutenticado?.let {
-                Text("Bienvenido ${it.nombre} [${it.rol}]")
             }
         }
     }

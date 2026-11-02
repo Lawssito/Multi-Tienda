@@ -44,7 +44,7 @@ class LoginViewModel : ViewModel() {
 
             _uiState.update {
                 if (usuario == null) {
-                    it.copy(errorGeneral = "Correo o Contraseña incorrectos")
+                    it.copy(errorGeneral = "Correo o contraseña incorrectos")
                 }else{
                     it.copy(errorGeneral = null, usuarioAutenticado = usuario)
                 }
