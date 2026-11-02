@@ -43,7 +43,7 @@ import com.bexai.multitienda.ui.theme.MultiTiendaTheme
 
 data class ItemNav(
     val ruta : String,
-    val etiquta : String,
+    val etiqueta : String,
     val icono : ImageVector,
 )
 
@@ -91,7 +91,7 @@ fun RoleBottomBar(
                     .clickable{ onItemClick(central) },
                 contentAlignment = Alignment.Center
             ) {
-                Icon(central.icono, contentDescription = central.etiquta, tint = BarraFondo)
+                Icon(central.icono, contentDescription = central.etiqueta, tint = BarraFondo)
             }
         }
     }
@@ -124,7 +124,7 @@ private fun ItemBarra(
             Icon(item.icono, contentDescription = null, tint = color)
         }
         Text(
-            text = item.etiquta,
+            text = item.etiqueta,
             color = color,
             fontSize = 13.sp,
             fontWeight = if (seleccionado) FontWeight.Bold else FontWeight.SemiBold
