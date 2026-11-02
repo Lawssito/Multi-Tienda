@@ -1,7 +1,10 @@
 package com.bexai.multitienda.ui.navigation
 
 import androidx.compose.foundation.layout.padding
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
+import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavGraphBuilder
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.composable
@@ -10,6 +13,7 @@ import com.bexai.multitienda.model.ResumenDia
 import com.bexai.multitienda.ui.view.AccionPantalla
 import com.bexai.multitienda.ui.view.PantallaVacia
 import com.bexai.multitienda.ui.view.operador.InicioOperadorView
+import com.bexai.multitienda.viewmodel.InicioOperadorViewModel
 
 fun NavGraphBuilder.operadorNavGraph(navController: NavHostController) {
     navigation(
@@ -17,13 +21,15 @@ fun NavGraphBuilder.operadorNavGraph(navController: NavHostController) {
         route = Ruta.GRAFO_OPERADOR
     ) {
         composable(Ruta.OperadorInicio.ruta) {
+            val viewModel : InicioOperadorViewModel = viewModel()
+            val estado by viewModel.uiState.collectAsState()
             ConBarraOperador(navController) { padding ->
                 InicioOperadorView(
-                    sucursal = "Tienda Centro",
-                    fecha = "29 sept",
-                    resumen = ResumenDia(entradas = 214, salidas = 96, movimientos = 24, contados = 120),
-                    onMovimiento = {},
-                    onConteoMasivo = {},
+                    sucursal = estado.sucursal,
+                    fecha = estado.fecha,
+                    resumen = estado.resumen,
+                    onMovimiento = {tipo -> viewModel.registrarPrueba(tipo)},
+                    onConteo = {},
                     modifier = Modifier.padding(padding)
                 )
             }
