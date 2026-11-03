@@ -10,8 +10,10 @@ import androidx.navigation.NavHostController
 import androidx.navigation.compose.composable
 import androidx.navigation.navigation
 import com.bexai.multitienda.model.ResumenDia
+import com.bexai.multitienda.model.TipoMovimiento
 import com.bexai.multitienda.ui.view.AccionPantalla
 import com.bexai.multitienda.ui.view.PantallaVacia
+import com.bexai.multitienda.ui.view.operador.EscanerView
 import com.bexai.multitienda.ui.view.operador.InicioOperadorView
 import com.bexai.multitienda.viewmodel.InicioOperadorViewModel
 
@@ -50,14 +52,12 @@ fun NavGraphBuilder.operadorNavGraph(navController: NavHostController) {
                 )
             }
         }
-        // El escáner va sin barra: es pantalla completa en el mockup
         composable(Ruta.OperadorEscaner.ruta) {
-            PantallaVacia(
-                titulo = "Escáner",
-                descripcion = "Aquí irá la cámara.",
-                acciones = listOf(
-                    AccionPantalla("Cerrar") { navController.popBackStack() }
-                )
+            EscanerView(
+                tipo = TipoMovimiento.ENTRADA,
+                sucursal = "Tienda Centro",
+                onCerrar = { navController.popBackStack() },
+                onListo = { navController.popBackStack() }
             )
         }
     }
