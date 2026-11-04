@@ -7,6 +7,8 @@ import androidx.compose.ui.Modifier
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavGraphBuilder
 import androidx.navigation.NavHostController
+import androidx.navigation.NavType
+import androidx.navigation.navArgument
 import androidx.navigation.compose.composable
 import androidx.navigation.navigation
 import com.bexai.multitienda.model.ResumenDia
@@ -30,8 +32,8 @@ fun NavGraphBuilder.operadorNavGraph(navController: NavHostController) {
                     sucursal = estado.sucursal,
                     fecha = estado.fecha,
                     resumen = estado.resumen,
-                    onMovimiento = {tipo -> viewModel.registrarPrueba(tipo)},
-                    onConteo = {},
+                    onMovimiento = { tipo -> navController.navigate(Ruta.OperadorEscaner.conTipo(tipo)) },
+                    onConteo = { navController.navigate(Ruta.OperadorEscaner.conTipo(TipoMovimiento.AJUSTE, conteo = true)) },
                     modifier = Modifier.padding(padding)
                 )
             }
@@ -52,9 +54,25 @@ fun NavGraphBuilder.operadorNavGraph(navController: NavHostController) {
                 )
             }
         }
-        composable(Ruta.OperadorEscaner.ruta) {
+        composable(
+            route = Ruta.OperadorEscaner.patron,
+            arguments = listOf(
+                navArgument("tipo") {
+                    type = NavType.StringType
+                    defaultValue = TipoMovimiento.ENTRADA.name
+                },
+                navArgument("conteo") {
+                    type = NavType.BoolType
+                    defaultValue = false
+                }
+            )
+        ) { entrada ->
+            val args = entrada.arguments
+            val tipo = TipoMovimiento.valueOf(args?.getString("tipo") ?: TipoMovimiento.ENTRADA.name)
+            val esConteo = args?.getBoolean("conteo") ?: false
             EscanerView(
-                tipo = TipoMovimiento.ENTRADA,
+                tipo = tipo,
+                esConteo = esConteo,
                 sucursal = "Tienda Centro",
                 onCerrar = { navController.popBackStack() },
                 onListo = { navController.popBackStack() }

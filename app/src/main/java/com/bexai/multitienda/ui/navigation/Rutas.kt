@@ -1,5 +1,7 @@
 package com.bexai.multitienda.ui.navigation
 
+import com.bexai.multitienda.model.TipoMovimiento
+
 /**
  * Rutas de la aplicación.
  *
@@ -17,7 +19,14 @@ sealed class Ruta(val ruta: String) {
 
     // Pantallas del grafo de operador (las completa la Persona A).
     data object OperadorInicio : Ruta("operador/inicio")
-    data object OperadorEscaner : Ruta("operador/escaner")
+    data object OperadorEscaner : Ruta("operador/escaner") {
+        // Patrón que registra el grafo (ambos argumentos son opcionales)
+        val patron = "operador/escaner?tipo={tipo}&conteo={conteo}"
+
+        // Ruta concreta para navegar con un tipo
+        fun conTipo(tipo: TipoMovimiento, conteo: Boolean = false) =
+            "operador/escaner?tipo=${tipo.name}&conteo=$conteo"
+    }
     data object OperadorCuenta : Ruta("operador/cuenta")
 
     // Pantalla del grafo de encargado

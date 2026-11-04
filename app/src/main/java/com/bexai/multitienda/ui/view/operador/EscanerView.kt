@@ -85,6 +85,7 @@ import com.bexai.multitienda.ui.theme.TextoSecundario
 @Composable
 fun EscanerView(
     tipo: TipoMovimiento,
+    esConteo: Boolean,
     sucursal: String,
     onCerrar: () -> Unit,
     onListo: () -> Unit,
@@ -152,6 +153,7 @@ fun EscanerView(
             BarraSuperiorEscaner(
                 sucursal = sucursal,
                 tipo = tipo,
+                esConteo = esConteo,
                 onCerrar = onCerrar,
                 onListo = onListo,
                 modifier = Modifier.align(Alignment.TopCenter)
@@ -222,6 +224,7 @@ private fun MarcoVisor(modifier: Modifier = Modifier) {
 private fun BarraSuperiorEscaner(
     sucursal: String,
     tipo: TipoMovimiento,
+    esConteo: Boolean,
     onCerrar: () -> Unit,
     onListo: () -> Unit,
     modifier: Modifier = Modifier
@@ -244,7 +247,7 @@ private fun BarraSuperiorEscaner(
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
             Text(sucursal, color = Color.White, fontSize = 18.sp, fontWeight = FontWeight.Bold)
             Spacer(Modifier.height(6.dp))
-            ChipTipo(tipo)
+            ChipTipo(tipo, esConteo)
         }
 
         Button(
@@ -255,11 +258,12 @@ private fun BarraSuperiorEscaner(
 }
 
 @Composable
-private fun ChipTipo(tipo: TipoMovimiento) {
-    val (texto, color, fondo) = when (tipo) {
-        TipoMovimiento.ENTRADA -> Triple("Entrada", AzulOscuro, AzulSuave)
-        TipoMovimiento.SALIDA -> Triple("Salida", Peligro, PeligroSuave)
-        TipoMovimiento.AJUSTE -> Triple("Ajuste", Advertencia, AdvertenciaSuave)
+private fun ChipTipo(tipo: TipoMovimiento, esConteo: Boolean) {
+    val (texto, color, fondo) = when {
+        esConteo -> Triple("Conteo", TextoPrincipal, SuperficieVariante)
+        tipo == TipoMovimiento.ENTRADA -> Triple("Entrada", AzulOscuro, AzulSuave)
+        tipo == TipoMovimiento.SALIDA -> Triple("Salida", Peligro, PeligroSuave)
+        else -> Triple("Ajuste", Advertencia, AdvertenciaSuave)
     }
     Row(
         modifier = Modifier
