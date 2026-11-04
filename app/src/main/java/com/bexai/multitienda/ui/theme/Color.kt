@@ -21,8 +21,10 @@ val Borde = Color(0xFFE6EAF0)
 // Estados
 val Peligro = Color(0xFFB91C1C)
 val PeligroSuave = Color(0xFFFEE2E2)
+val Advertencia = Color(0xFFC2410C)
+val AdvertenciaSuave = Color(0xFFFFEDD5)
 val Exito = Color(0xFF15803D)
-val ExitoSuave = Color(0xFFE7F7EF)
+val ExitoSuave = Color(0xFFB9FDCB)
 
 // Barra de navegacion
 val BarraFondo = Color(0xFF0F172A)
