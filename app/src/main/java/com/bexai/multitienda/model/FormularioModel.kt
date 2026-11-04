@@ -14,5 +14,6 @@ data class FormularioModel(
     val nombre: String = "",
     val stock: String = "",
     val nombreError: String? = null,
-    val stockError: String? = null
+    val stockError: String? = null,
+    val guardando: Boolean = false
 )

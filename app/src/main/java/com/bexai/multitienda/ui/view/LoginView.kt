@@ -34,7 +34,7 @@ import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.bexai.multitienda.model.Rol
+import com.bexai.multitienda.model.Usuario
 import com.bexai.multitienda.ui.theme.Azul
 import com.bexai.multitienda.ui.theme.Borde
 import com.bexai.multitienda.ui.theme.Superficie
@@ -42,13 +42,16 @@ import com.bexai.multitienda.viewmodel.LoginViewModel
 
 @Composable
 fun LoginView(
-    onLoginExitoso:(Rol)-> Unit,
+    onLoginExitoso: (Usuario) -> Unit,
     viewModel: LoginViewModel = viewModel()
 ) {
     val estado by viewModel.uiState.collectAsState()
 
-    LaunchedEffect(estado.usuarioAutenticado){
-        estado.usuarioAutenticado?.let { onLoginExitoso(it.rol)}
+    LaunchedEffect(estado.usuarioAutenticado) {
+        estado.usuarioAutenticado?.let { usuario ->
+            onLoginExitoso(usuario)
+            viewModel.onLoginConsumido()
+        }
     }
 
     val colorCampo = OutlinedTextFieldDefaults.colors(
@@ -137,9 +140,14 @@ fun LoginView(
 
             Button(
                 onClick = viewModel::onLoginClick,
+                enabled = !estado.cargando,
                 shape = RoundedCornerShape(18.dp),
                 modifier = Modifier.fillMaxWidth().height(58.dp)) {
-                Text("Iniciar sesión", fontSize = 17.sp, fontWeight = FontWeight.Bold)
+                Text(
+                    text = if (estado.cargando) "Ingresando..." else "Iniciar sesión",
+                    fontSize = 17.sp,
+                    fontWeight = FontWeight.Bold
+                )
             }
         }
     }

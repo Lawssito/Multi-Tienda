@@ -15,8 +15,12 @@ sealed class Ruta(val ruta: String) {
     // Pantalla inicial (login).
     data object Login : Ruta("login")
 
+    // Después del login se elige la sucursal y se completa la sesión.
+    data object SeleccionSucursal : Ruta("sesion/sucursal")
+
     // Pantallas del grafo de operador (las completa la Persona A).
     data object OperadorInicio : Ruta("operador/inicio")
+    data object OperadorProductos : Ruta("operador/productos")
     data object OperadorEscaner : Ruta("operador/escaner")
     data object OperadorCuenta : Ruta("operador/cuenta")
 

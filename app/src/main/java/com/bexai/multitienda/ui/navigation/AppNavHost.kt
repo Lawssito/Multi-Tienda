@@ -1,26 +1,23 @@
 package com.bexai.multitienda.ui.navigation
 
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.tooling.preview.Preview
+import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
-import androidx.navigation.compose.navigation
 import androidx.navigation.compose.rememberNavController
 import com.bexai.multitienda.model.Rol
-import com.bexai.multitienda.ui.theme.MultiTiendaTheme
-import com.bexai.multitienda.ui.view.AccionPantalla
 import com.bexai.multitienda.ui.view.LoginView
-import com.bexai.multitienda.ui.view.PantallaVacia
-import com.bexai.multitienda.ui.view.ProductosView
+import com.bexai.multitienda.ui.view.SeleccionSucursalView
+import com.bexai.multitienda.viewmodel.SesionViewModel
 
 @Composable
 fun AppNavHost(
     modifier: Modifier = Modifier,
-    navController: NavHostController = rememberNavController()
+    navController: NavHostController = rememberNavController(),
+    sesionViewModel: SesionViewModel = viewModel()
 ) {
     NavHost(
         navController = navController,
@@ -29,34 +26,44 @@ fun AppNavHost(
     ) {
         // ---------- LOGIN ----------
         composable(Ruta.Login.ruta) {
+            // Al volver al login (por ejemplo, después de cerrar sesión)
+            // se limpia la sesión anterior.
+            LaunchedEffect(Unit) {
+                sesionViewModel.cerrarSesion()
+            }
+
             LoginView(
-                onLoginExitoso = { rol ->
-                    val destino = when (rol) {
-                        Rol.OPERADOR -> Ruta.GRAFO_OPERADOR
-                        Rol.ENCARGADO -> Ruta.GRAFO_ENCARGADO
-                        Rol.GERENCIA -> Ruta.GRAFO_GERENCIA
-                    }
-                    navController.navigate(destino){
-                        popUpTo(Ruta.Login.ruta) { inclusive = true }
+                onLoginExitoso = { usuario ->
+                    sesionViewModel.iniciarSesion(usuario)
+                    navController.navigate(Ruta.SeleccionSucursal.ruta) {
                         launchSingleTop = true
                     }
                 }
             )
         }
 
-        operadorNavGraph(navController)
-        encargadoNavGraph(navController)
-        gerenciaNavGraph(navController)
-    }
-}
+        // ---------- ELECCIÓN DE SUCURSAL ----------
+        composable(Ruta.SeleccionSucursal.ruta) {
+            SeleccionSucursalView(
+                onContinuar = { rol ->
+                    val destino = when (rol) {
+                        Rol.OPERADOR -> Ruta.GRAFO_OPERADOR
+                        Rol.ENCARGADO -> Ruta.GRAFO_ENCARGADO
+                        Rol.GERENCIA -> Ruta.GRAFO_GERENCIA
+                    }
+                    navController.navigate(destino) {
+                        // El login y la elección de sucursal ya no se necesitan
+                        popUpTo(Ruta.Login.ruta) { inclusive = true }
+                        launchSingleTop = true
+                    }
+                },
+                onVolverLogin = { navController.popBackStack() },
+                viewModel = sesionViewModel
+            )
+        }
 
-/**
- * Vista previa del grafo completo. Muestra la pantalla inicial (login).
- */
-@Preview(showBackground = true)
-@Composable
-fun AppNavHostPreview() {
-    MultiTiendaTheme {
-        AppNavHost()
+        operadorNavGraph(navController, sesionViewModel)
+        encargadoNavGraph(navController, sesionViewModel)
+        gerenciaNavGraph(navController, sesionViewModel)
     }
 }

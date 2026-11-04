@@ -40,8 +40,8 @@ fun ProductRow(
                 // detectTapGestures permite saber cuándo se presiona y suelta
                 detectTapGestures(
                     onPress = {
-                        // Espera máximo 1 segundos a que el usuario suelte
-                        val resultado = withTimeoutOrNull(1000L) {
+                        // Espera máximo 3 segundos a que el usuario suelte
+                        val resultado = withTimeoutOrNull(3000L) {
                             tryAwaitRelease()
                         }
                         // Si el tiempo se agotó (resultado null), mantuvo presionado

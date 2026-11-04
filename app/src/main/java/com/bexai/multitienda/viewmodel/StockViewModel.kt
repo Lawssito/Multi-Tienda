@@ -1,38 +1,64 @@
 package com.bexai.multitienda.viewmodel
 
-import androidx.lifecycle.ViewModel
-import com.bexai.multitienda.data.StockRepository
+import android.app.Application
+import androidx.lifecycle.AndroidViewModel
+import androidx.lifecycle.viewModelScope
+import com.bexai.multitienda.data.AppDatabase
 import com.bexai.multitienda.model.FormularioModel
-import com.bexai.multitienda.model.Producto
+import com.bexai.multitienda.model.ProductoStock
+import com.bexai.multitienda.repository.ProductoRepository
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.launch
 
 /**
  * StockViewModel: contiene la lógica y el estado de la pantalla de productos.
  *
- * Sigue el mismo formato de LoginViewModel:
  * - [uiState] guarda lo que el usuario escribe y los errores del formulario.
- * - [productos] es la lista que se muestra en la vista.
- * - [agregar] valida los datos y, si todo está bien, guarda en el repositorio.
- * - [eliminar] quita un producto por medio del repositorio.
- *
- * Los datos se piden a [StockRepository] (carpeta data/), no directamente
- * a la vista. Así, cuando se conecte Room, solo cambia el repositorio.
+ * - [productos] es la lista del catálogo con el stock de la sucursal actual.
+ * - [seleccionarUbicacion] conecta la pantalla con la sucursal de la sesión.
+ * - [agregar] valida los datos y guarda producto + stock en Room.
+ * - [eliminar] quita el producto y sus cantidades por sucursal.
  */
-class StockViewModel : ViewModel() {
+class StockViewModel(application: Application) : AndroidViewModel(application) {
 
-    // Único punto de acceso a los datos
-    private val repository = StockRepository()
+    private val baseDeDatos = AppDatabase.getDatabase(application)
+    private val repository = ProductoRepository(baseDeDatos)
 
-    // Lista de productos que se muestra en la vista
-    private val _productos = MutableStateFlow(repository.listar())
-    val productos: StateFlow<List<Producto>> = _productos.asStateFlow()
+    // Catálogo con el stock de la sucursal seleccionada
+    private val _productos = MutableStateFlow<List<ProductoStock>>(emptyList())
+    val productos: StateFlow<List<ProductoStock>> = _productos.asStateFlow()
 
     // Estado del formulario (campos + errores)
     private val _uiState = MutableStateFlow(FormularioModel())
     val uiState: StateFlow<FormularioModel> = _uiState.asStateFlow()
+
+    private var ubicacionActual: Int? = null
+    private var trabajoProductos: Job? = null
+
+    /**
+     * Indica qué sucursal se está mostrando. La pantalla la recibe de la
+     * sesión y la llama cada vez que cambia.
+     */
+    fun seleccionarUbicacion(ubicacionId: Int) {
+        if (ubicacionActual == ubicacionId && trabajoProductos?.isActive == true) return
+
+        ubicacionActual = ubicacionId
+        trabajoProductos?.cancel()
+        trabajoProductos = viewModelScope.launch {
+            repository.listarConStock(ubicacionId).collect { lista ->
+                _productos.value = lista
+            }
+        }
+
+        // Solo crea los productos de ejemplo si el catálogo está vacío
+        viewModelScope.launch {
+            repository.asegurarProductosDemo(ubicacionId)
+        }
+    }
 
     /**
      * Se ejecuta cada vez que el usuario escribe el nombre.
@@ -54,18 +80,23 @@ class StockViewModel : ViewModel() {
      *
      * Reglas:
      * - Nombre: mínimo 5 caracteres.
-     * - Precio: número mayor que 0.
      * - Stock: número entero de 0 o más.
+     * - Debe existir una sucursal seleccionada.
      */
     fun agregar() {
-        val estado = _uiState.value
+        val ubicacionId = ubicacionActual
+        if (ubicacionId == null) {
+            _uiState.update { it.copy(stockError = "Selecciona una sucursal para continuar") }
+            return
+        }
 
-        // Se revisa cada campo
+        val estado = _uiState.value
+        if (estado.guardando) return
+
         val nombreValido = estado.nombre.trim().length >= 5
         val stockNumero = estado.stock.toIntOrNull()
         val stockValido = stockNumero != null && stockNumero >= 0
 
-        // Se guardan los mensajes de error (null si el campo está bien)
         _uiState.update {
             it.copy(
                 nombreError = if (nombreValido) null else "El nombre debe tener mínimo 5 caracteres",
@@ -73,24 +104,35 @@ class StockViewModel : ViewModel() {
             )
         }
 
-        // Si todo está bien, se guarda el producto y se limpia el formulario
-        if (nombreValido && stockValido) {
-            repository.agregar(
-                Producto(
+        if (!nombreValido || !stockValido) return
+
+        _uiState.update { it.copy(guardando = true) }
+        viewModelScope.launch {
+            runCatching {
+                repository.agregar(
                     nombre = estado.nombre.trim(),
-                    stock = stockNumero!!
+                    cantidad = stockNumero!!,
+                    ubicacionId = ubicacionId
                 )
-            )
-            _productos.value = repository.listar()
-            _uiState.value = FormularioModel()
+            }.onSuccess {
+                _uiState.value = FormularioModel()
+            }.onFailure {
+                _uiState.update {
+                    it.copy(
+                        guardando = false,
+                        stockError = "No se pudo guardar el producto"
+                    )
+                }
+            }
         }
     }
 
     /**
      * Elimina el producto recibido por medio del repositorio.
      */
-    fun eliminar(producto: Producto) {
-        repository.eliminar(producto)
-        _productos.value = repository.listar()
+    fun eliminar(producto: ProductoStock) {
+        viewModelScope.launch {
+            repository.eliminar(producto.id)
+        }
     }
 }

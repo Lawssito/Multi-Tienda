@@ -4,19 +4,15 @@ import androidx.room.Entity
 import androidx.room.PrimaryKey
 
 /**
- * Producto: representa un artículo del inventario.
+ * Producto: artículo del catálogo general.
  *
- * Está marcado como @Entity igual que los modelos del repo (por ejemplo Usuario).
- * El id se genera automáticamente cuando se guarde en Room; por eso tiene
- * valor por defecto 0 al crear un producto nuevo.
- *
- * Puedes agregar más campos según lo que necesite el proyecto
- * (por ejemplo: categoría, código de barras, descripción, etc.).
+ * La cantidad disponible no vive aquí: cada sucursal tiene su propia
+ * cantidad en [StockUbicacion]. Así un mismo producto puede tener
+ * existencias distintas en cada tienda.
  */
-@Entity
+@Entity(tableName = "productos")
 data class Producto(
     @PrimaryKey(autoGenerate = true)
-    val id: Int = 0,    // Identificador único del producto
-    val nombre: String, // Nombre del producto
-    val stock: Int      // Unidades disponibles
+    val id: Int = 0,
+    val nombre: String
 )

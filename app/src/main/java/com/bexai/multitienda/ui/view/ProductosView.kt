@@ -12,6 +12,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -21,7 +22,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.bexai.multitienda.model.Producto
+import com.bexai.multitienda.model.FormularioModel
+import com.bexai.multitienda.model.ProductoStock
 import com.bexai.multitienda.ui.components.ConfirmDialog
 import com.bexai.multitienda.ui.components.ProductRow
 import com.bexai.multitienda.ui.components.SearchField
@@ -33,17 +35,20 @@ import com.bexai.multitienda.viewmodel.StockViewModel
  * ProductosView: pantalla funcional de productos.
  *
  * La vista solo muestra información y avisa al usuario; la lógica y el estado
- * viven en [StockViewModel].
+ * viven en [StockViewModel]. El stock que se muestra es el de la sucursal
+ * elegida en la sesión.
  *
  * Permite:
- * - Agregar productos con validaciones (nombre, precio y stock).
+ * - Agregar productos con validaciones (nombre y stock).
  * - Buscar productos por nombre con [SearchField].
  * - Ver la lista con [ProductRow].
- * - Eliminar un producto manteniéndolo presionado 3 segundos y confirmando
- *   con [ConfirmDialog].
+ * - Eliminar un producto manteniéndolo presionado y confirmando con
+ *   [ConfirmDialog].
  */
 @Composable
 fun ProductosView(
+    ubicacionId: Int,
+    nombreSucursal: String? = null,
     modifier: Modifier = Modifier,
     viewModel: StockViewModel = viewModel(),
     onVolver: (() -> Unit)? = null
@@ -52,11 +57,44 @@ fun ProductosView(
     val estado by viewModel.uiState.collectAsState()
     val productos by viewModel.productos.collectAsState()
 
+    // Conecta el ViewModel con la sucursal elegida en la sesión
+    LaunchedEffect(ubicacionId) {
+        viewModel.seleccionarUbicacion(ubicacionId)
+    }
+
+    ProductosContenido(
+        estado = estado,
+        productos = productos,
+        nombreSucursal = nombreSucursal,
+        onNombreChange = viewModel::onNombreChange,
+        onStockChange = viewModel::onStockChange,
+        onAgregar = viewModel::agregar,
+        onEliminar = viewModel::eliminar,
+        onVolver = onVolver,
+        modifier = modifier
+    )
+}
+
+/**
+ * Contenido sin ViewModel para que la vista previa pueda usar datos de ejemplo.
+ */
+@Composable
+private fun ProductosContenido(
+    estado: FormularioModel,
+    productos: List<ProductoStock>,
+    nombreSucursal: String?,
+    onNombreChange: (String) -> Unit,
+    onStockChange: (String) -> Unit,
+    onAgregar: () -> Unit,
+    onEliminar: (ProductoStock) -> Unit,
+    onVolver: (() -> Unit)?,
+    modifier: Modifier = Modifier
+) {
     // Texto del buscador (solo afecta a esta pantalla, por eso vive aquí)
     var busqueda by remember { mutableStateOf("") }
 
     // Producto que se quiere eliminar (null = no se muestra el diálogo)
-    var productoAEliminar by remember { mutableStateOf<Producto?>(null) }
+    var productoAEliminar by remember { mutableStateOf<ProductoStock?>(null) }
 
     // Lista filtrada según lo que se escriba en el buscador
     val productosFiltrados = productos.filter {
@@ -64,19 +102,22 @@ fun ProductosView(
     }
 
     Column(
-        // Ocupa toda la pantalla y deja un margen interno
         modifier = modifier
             .fillMaxSize()
             .padding(16.dp),
-        // Separación entre cada elemento
         verticalArrangement = Arrangement.spacedBy(8.dp)
     ) {
-        // Si la pantalla se abrió desde la navegación, muestra un botón para volver
-        val volver = onVolver
-        if (volver != null) {
-            TextButton(onClick = volver) {
+        if (onVolver != null) {
+            TextButton(onClick = onVolver) {
                 Text(text = "← Volver")
             }
+        }
+
+        if (nombreSucursal != null) {
+            Text(
+                text = "Sucursal: $nombreSucursal",
+                style = MaterialTheme.typography.titleMedium
+            )
         }
 
         Text(
@@ -87,7 +128,7 @@ fun ProductosView(
         // Campo para el nombre, con validación
         ValidatedTextField(
             value = estado.nombre,
-            onValueChange = viewModel::onNombreChange,
+            onValueChange = onNombreChange,
             label = "Nombre del producto",
             isError = estado.nombreError != null,
             supportingText = estado.nombreError
@@ -96,17 +137,18 @@ fun ProductosView(
         // Campo para el stock, con validación
         ValidatedTextField(
             value = estado.stock,
-            onValueChange = viewModel::onStockChange,
-            label = "Stock",
+            onValueChange = onStockChange,
+            label = "Stock inicial en esta sucursal",
             isError = estado.stockError != null,
             supportingText = estado.stockError
         )
 
         Button(
-            onClick = viewModel::agregar,
-            modifier = Modifier.fillMaxWidth()
+            onClick = onAgregar,
+            modifier = Modifier.fillMaxWidth(),
+            enabled = !estado.guardando
         ) {
-            Text(text = "Agregar")
+            Text(text = if (estado.guardando) "Guardando..." else "Agregar")
         }
 
         Text(
@@ -126,9 +168,8 @@ fun ProductosView(
             style = MaterialTheme.typography.bodyMedium
         )
 
-        // Instrucción para que el usuario sepa cómo eliminar
         Text(
-            text = "Mantén presionado un producto 3 segundos para eliminarlo",
+            text = "Mantén presionado un producto para eliminarlo",
             style = MaterialTheme.typography.bodySmall
         )
 
@@ -155,7 +196,7 @@ fun ProductosView(
             title = "Eliminar producto",
             message = "¿Seguro que deseas eliminar ${producto.nombre}?",
             onConfirm = {
-                viewModel.eliminar(producto)
+                onEliminar(producto)
                 productoAEliminar = null
             },
             onDismiss = {
@@ -166,12 +207,24 @@ fun ProductosView(
 }
 
 /**
- * Vista previa de la pantalla completa con los datos de ejemplo.
+ * Vista previa de la pantalla con datos de ejemplo.
  */
 @Preview(showBackground = true)
 @Composable
 fun ProductosViewPreview() {
     MultiTiendaTheme {
-        ProductosView()
+        ProductosContenido(
+            estado = FormularioModel(nombre = "Leche entera 1 L", stock = "24"),
+            productos = listOf(
+                ProductoStock(id = 1, nombre = "Leche entera 1 L", stock = 24),
+                ProductoStock(id = 2, nombre = "Pan tajado", stock = 0)
+            ),
+            nombreSucursal = "Sucursal Centro",
+            onNombreChange = {},
+            onStockChange = {},
+            onAgregar = {},
+            onEliminar = {},
+            onVolver = null
+        )
     }
 }

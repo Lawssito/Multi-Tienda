@@ -6,5 +6,6 @@ data class LoginModel(
     val passwordError: String? = null,
     val emailError: String? = null,
     val errorGeneral: String? = null,
-    val usuarioAutenticado: Usuario? = null
+    val usuarioAutenticado: Usuario? = null,
+    val cargando: Boolean = false
 )
