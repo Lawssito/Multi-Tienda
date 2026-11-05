@@ -12,6 +12,12 @@ interface MovimientoDao {
     @Insert
     suspend fun insertar(movimiento: Movimiento): Long
 
+    @Query("UPDATE movimiento SET cantidad = :cantidad WHERE id = :id")
+    suspend fun actualizarCantidad(id: Int, cantidad: Int)
+
+    @Query("UPDATE movimiento SET cantidad = :cantidad, motivo = :motivo WHERE id = :id")
+    suspend fun actualizarAjuste(id: Int, cantidad: Int, motivo: String)
+
     @Query("""
         SELECT
             COALESCE(SUM(CASE WHEN tipo = 'ENTRADA' THEN cantidad ELSE 0 END), 0) AS entradas,

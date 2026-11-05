@@ -14,20 +14,38 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
-/** Resumen de lo último escaneado: el mismo producto repetido acumula la cantidad (x N). */
+/**
+ * Lo último escaneado. En Entrada/Salida el mismo producto repetido acumula la
+ * cantidad (x N) sobre un único Movimiento. En Ajuste, [cantidad] es el total real.
+ */
 data class UltimaLectura(
     val productoId: Int,
     val nombre: String,
     val tipo: TipoMovimiento,
     val cantidad: Int,
     val stockAntes: Int,
-    val stockDespues: Int
+    val stockDespues: Int,
+    val movimientoId: Int,
+    val motivo: String? = null
+)
+
+/** Datos de la hoja inferior (Cambiar cantidad o Ajuste). */
+data class HojaCantidad(
+    val esAjuste: Boolean,
+    val productoId: Int,
+    val nombre: String,
+    val tipo: TipoMovimiento,
+    val stockBase: Int,            // stock antes de este movimiento
+    val cantidadInicial: Int,
+    val motivoInicial: String = "",
+    val movimientoId: Int? = null  // si ya existe, la hoja lo edita en vez de crear otro
 )
 
 data class EscanerUiState(
     val lecturas: Int = 0,
     val ultima: UltimaLectura? = null,
-    val mensaje: String? = null
+    val mensaje: String? = null,
+    val hoja: HojaCantidad? = null
 )
 
 class EscanerViewModel(app: Application) : AndroidViewModel(app) {
@@ -42,62 +60,175 @@ class EscanerViewModel(app: Application) : AndroidViewModel(app) {
         viewModelScope.launch { sembrarProductosDemo() }
     }
 
-    /** Cada lectura mueve 1 unidad: +1 en Entrada, -1 en Salida. */
-    fun procesarCodigo(codigo: String, tipo: TipoMovimiento) {
-        viewModelScope.launch {
-            if (tipo == TipoMovimiento.AJUSTE) {
-                avisar("El ajuste se completa en su propia pantalla (pendiente)")
-                return@launch
-            }
+    fun procesarCodigo(codigo: String, tipo: TipoMovimiento, esConteo: Boolean) {
+        if (_uiState.value.hoja != null) return   // con la hoja abierta no se leen códigos
+        if (esConteo) {
+            avisar("El conteo se completa en su propia pantalla (pendiente)")
+            return
+        }
 
+        viewModelScope.launch {
             val producto = db.productoDao().buscarPorCodigo(codigo)
             if (producto == null) {
                 avisar("Producto no encontrado: $codigo")
                 return@launch
             }
 
+            // Ajuste: se abre la hoja para escribir el total real y el motivo
+            if (tipo == TipoMovimiento.AJUSTE) {
+                _uiState.update {
+                    it.copy(
+                        mensaje = null,
+                        hoja = HojaCantidad(
+                            esAjuste = true,
+                            productoId = producto.id,
+                            nombre = producto.nombre,
+                            tipo = tipo,
+                            stockBase = producto.stock,
+                            cantidadInicial = producto.stock
+                        )
+                    )
+                }
+                return@launch
+            }
+
+            // Entrada / Salida: cada lectura mueve 1 unidad
             val delta = if (tipo == TipoMovimiento.ENTRADA) 1 else -1
             if (producto.stock + delta < 0) {
                 avisar("Sin stock de ${producto.nombre}")
                 return@launch
             }
+            val stockNuevo = producto.stock + delta
 
-            // Movimiento y stock se guardan juntos: o se guardan los dos o ninguno
-            db.withTransaction {
-                db.movimientoDao().insertar(
-                    Movimiento(
-                        productoId = producto.id,
-                        ubicacionId = ubicacionId,
-                        tipo = tipo,
-                        cantidad = 1,
-                        fechaHora = System.currentTimeMillis()
-                    )
-                )
-                db.productoDao().sumarStock(producto.id, delta)
-            }
-
-            _uiState.update { actual ->
-                val previa = actual.ultima
-                val ultima =
-                    if (previa != null && previa.productoId == producto.id && previa.tipo == tipo) {
-                        previa.copy(
-                            cantidad = previa.cantidad + 1,
-                            stockDespues = producto.stock + delta
-                        )
-                    } else {
-                        UltimaLectura(
+            val previa = _uiState.value.ultima
+            val ultima = if (previa != null && previa.productoId == producto.id && previa.tipo == tipo) {
+                // Mismo producto: se suma al movimiento que ya existe
+                val cantidad = previa.cantidad + 1
+                db.withTransaction {
+                    db.movimientoDao().actualizarCantidad(previa.movimientoId, cantidad)
+                    db.productoDao().sumarStock(producto.id, delta)
+                }
+                previa.copy(cantidad = cantidad, stockDespues = stockNuevo)
+            } else {
+                val movimientoId = db.withTransaction {
+                    val id = db.movimientoDao().insertar(
+                        Movimiento(
                             productoId = producto.id,
-                            nombre = producto.nombre,
+                            ubicacionId = ubicacionId,
                             tipo = tipo,
                             cantidad = 1,
-                            stockAntes = producto.stock,
-                            stockDespues = producto.stock + delta
+                            fechaHora = System.currentTimeMillis()
                         )
-                    }
-                actual.copy(lecturas = actual.lecturas + 1, ultima = ultima, mensaje = null)
+                    ).toInt()
+                    db.productoDao().sumarStock(producto.id, delta)
+                    id
+                }
+                UltimaLectura(
+                    productoId = producto.id,
+                    nombre = producto.nombre,
+                    tipo = tipo,
+                    cantidad = 1,
+                    stockAntes = producto.stock,
+                    stockDespues = stockNuevo,
+                    movimientoId = movimientoId
+                )
+            }
+
+            _uiState.update {
+                it.copy(lecturas = it.lecturas + 1, ultima = ultima, mensaje = null)
             }
         }
     }
+
+    /** Al tocar la tarjeta: abre la hoja para editar lo último escaneado. */
+    fun abrirHojaCantidad() {
+        val ultima = _uiState.value.ultima ?: return
+        _uiState.update {
+            it.copy(
+                hoja = HojaCantidad(
+                    esAjuste = ultima.tipo == TipoMovimiento.AJUSTE,
+                    productoId = ultima.productoId,
+                    nombre = ultima.nombre,
+                    tipo = ultima.tipo,
+                    stockBase = ultima.stockAntes,
+                    cantidadInicial = ultima.cantidad,
+                    motivoInicial = ultima.motivo ?: "",
+                    movimientoId = ultima.movimientoId
+                )
+            )
+        }
+    }
+
+    fun cerrarHoja() = _uiState.update { it.copy(hoja = null) }
+
+    fun guardarHoja(cantidad: Int, motivo: String) {
+        val hoja = _uiState.value.hoja ?: return
+        viewModelScope.launch {
+            if (hoja.esAjuste) guardarAjuste(hoja, cantidad, motivo.trim())
+            else guardarCambioCantidad(hoja, cantidad)
+        }
+    }
+
+    private suspend fun guardarCambioCantidad(hoja: HojaCantidad, cantidad: Int) {
+        val movimientoId = hoja.movimientoId ?: return
+        val signo = if (hoja.tipo == TipoMovimiento.ENTRADA) 1 else -1
+        val stockNuevo = hoja.stockBase + signo * cantidad
+        if (cantidad < 1 || stockNuevo < 0) return
+
+        db.withTransaction {
+            db.movimientoDao().actualizarCantidad(movimientoId, cantidad)
+            db.productoDao().fijarStock(hoja.productoId, stockNuevo)
+        }
+        _uiState.update {
+            it.copy(
+                ultima = it.ultima?.copy(cantidad = cantidad, stockDespues = stockNuevo),
+                hoja = null
+            )
+        }
+    }
+
+    private suspend fun guardarAjuste(hoja: HojaCantidad, total: Int, motivo: String) {
+        if (total < 0 || motivo.isEmpty() || motivo.length > 120) return
+
+        val movimientoId = db.withTransaction {
+            val id = if (hoja.movimientoId == null) {
+                db.movimientoDao().insertar(
+                    Movimiento(
+                        productoId = hoja.productoId,
+                        ubicacionId = ubicacionId,
+                        tipo = TipoMovimiento.AJUSTE,
+                        cantidad = total,          // el ajuste guarda la nueva cantidad
+                        motivo = motivo,
+                        fechaHora = System.currentTimeMillis()
+                    )
+                ).toInt()
+            } else {
+                db.movimientoDao().actualizarAjuste(hoja.movimientoId, total, motivo)
+                hoja.movimientoId
+            }
+            db.productoDao().fijarStock(hoja.productoId, total)
+            id
+        }
+        _uiState.update {
+            it.copy(
+                lecturas = if (hoja.movimientoId == null) it.lecturas + 1 else it.lecturas,
+                ultima = UltimaLectura(
+                    productoId = hoja.productoId,
+                    nombre = hoja.nombre,
+                    tipo = TipoMovimiento.AJUSTE,
+                    cantidad = total,
+                    stockAntes = hoja.stockBase,
+                    stockDespues = total,
+                    movimientoId = movimientoId,
+                    motivo = motivo
+                ),
+                hoja = null
+            )
+        }
+    }
+
+    /** Al cambiar el tipo en el chip, lo último escaneado deja de aplicar. */
+    fun reiniciarUltima() = _uiState.update { it.copy(ultima = null, mensaje = null, hoja = null) }
 
     fun avisarSinCodigo() = avisar("No se encontró código, intenta de nuevo")
 

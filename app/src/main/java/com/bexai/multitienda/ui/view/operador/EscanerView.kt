@@ -36,10 +36,13 @@ import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.FlashOn
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.outlined.CropFree
+import androidx.compose.material.icons.outlined.Edit
 import androidx.compose.material.icons.outlined.FlashOn
 import androidx.compose.material.icons.outlined.Keyboard
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Surface
@@ -55,6 +58,7 @@ import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.StrokeCap
@@ -97,9 +101,13 @@ fun EscanerView(
     esConteo: Boolean,
     sucursal: String,
     estado: EscanerUiState,
+    onTipoChange: (TipoMovimiento) -> Unit,
     onCodigo: (String) -> Unit,
     onSinCodigo: () -> Unit,
     onNuevaBusqueda: () -> Unit,
+    onAbrirHoja: () -> Unit,
+    onCerrarHoja: () -> Unit,
+    onGuardarHoja: (Int, String) -> Unit,
     onCerrar: () -> Unit,
     onListo: () -> Unit,
     modifier: Modifier = Modifier
@@ -188,6 +196,7 @@ fun EscanerView(
                 sucursal = sucursal,
                 tipo = tipo,
                 esConteo = esConteo,
+                onTipoChange = onTipoChange,
                 onCerrar = onCerrar,
                 onListo = onListo,
                 modifier = Modifier.align(Alignment.TopCenter)
@@ -206,9 +215,15 @@ fun EscanerView(
                     pedirLectura.set(true)
                     buscando = true
                 },
-                onFlash = { linterna = !linterna }
+                onFlash = { linterna = !linterna },
+                onCambiarCantidad = onAbrirHoja
             )
         }
+    }
+
+    // Hoja inferior: Cambiar cantidad o Ajuste
+    estado.hoja?.let { hoja ->
+        HojaCantidadView(hoja = hoja, onCerrar = onCerrarHoja, onGuardar = onGuardarHoja)
     }
 }
 
@@ -280,6 +295,7 @@ private fun BarraSuperiorEscaner(
     sucursal: String,
     tipo: TipoMovimiento,
     esConteo: Boolean,
+    onTipoChange: (TipoMovimiento) -> Unit,
     onCerrar: () -> Unit,
     onListo: () -> Unit,
     modifier: Modifier = Modifier
@@ -302,7 +318,7 @@ private fun BarraSuperiorEscaner(
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
             Text(sucursal, color = Color.White, fontSize = 18.sp, fontWeight = FontWeight.Bold)
             Spacer(Modifier.height(6.dp))
-            ChipTipo(tipo, esConteo)
+            ChipTipo(tipo, esConteo, onTipoChange)
         }
 
         Button(
@@ -313,23 +329,44 @@ private fun BarraSuperiorEscaner(
 }
 
 @Composable
-private fun ChipTipo(tipo: TipoMovimiento, esConteo: Boolean) {
+private fun ChipTipo(tipo: TipoMovimiento, esConteo: Boolean, onTipoChange: (TipoMovimiento) -> Unit) {
+    var abierto by remember { mutableStateOf(false) }
     val (texto, color, fondo) = when {
         esConteo -> Triple("Conteo", TextoPrincipal, SuperficieVariante)
         tipo == TipoMovimiento.ENTRADA -> Triple("Entrada", AzulOscuro, AzulSuave)
         tipo == TipoMovimiento.SALIDA -> Triple("Salida", Peligro, PeligroSuave)
         else -> Triple("Ajuste", Advertencia, AdvertenciaSuave)
     }
-    Row(
-        modifier = Modifier
-            .background(fondo, CircleShape)
-            .padding(horizontal = 14.dp, vertical = 6.dp),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Box(Modifier.size(8.dp).background(color, CircleShape))
-        Spacer(Modifier.width(8.dp))
-        Text(texto, color = color, fontWeight = FontWeight.Bold)
-        Icon(Icons.Default.KeyboardArrowDown, null, tint = color, modifier = Modifier.size(20.dp))
+    Box {
+        Row(
+            modifier = Modifier
+                .clip(CircleShape)
+                .background(fondo)
+                .clickable(enabled = !esConteo) { abierto = true }
+                .padding(horizontal = 14.dp, vertical = 6.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Box(Modifier.size(8.dp).background(color, CircleShape))
+            Spacer(Modifier.width(8.dp))
+            Text(texto, color = color, fontWeight = FontWeight.Bold)
+            Icon(Icons.Default.KeyboardArrowDown, null, tint = color, modifier = Modifier.size(20.dp))
+        }
+        // En conteo el tipo es fijo (Ajuste); en los demás se puede cambiar
+        DropdownMenu(expanded = abierto, onDismissRequest = { abierto = false }) {
+            listOf(
+                TipoMovimiento.ENTRADA to "Entrada",
+                TipoMovimiento.SALIDA to "Salida",
+                TipoMovimiento.AJUSTE to "Ajuste"
+            ).forEach { (opcion, nombre) ->
+                DropdownMenuItem(
+                    text = { Text(nombre) },
+                    onClick = {
+                        abierto = false
+                        if (opcion != tipo) onTipoChange(opcion)
+                    }
+                )
+            }
+        }
     }
 }
 
@@ -341,6 +378,7 @@ private fun PanelEscaner(
     onManual: () -> Unit,
     onDisparo: () -> Unit,
     onFlash: () -> Unit,
+    onCambiarCantidad: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     Surface(
@@ -372,7 +410,7 @@ private fun PanelEscaner(
                 )
             }
 
-            estado.ultima?.let { TarjetaLectura(it) }
+            estado.ultima?.let { TarjetaLectura(it, onCambiarCantidad) }
 
             if (buscando) {
                 Text("Buscando código…", color = TextoSecundario)
@@ -408,12 +446,18 @@ private fun PanelEscaner(
 }
 
 @Composable
-private fun TarjetaLectura(lectura: UltimaLectura) {
-    val signo = if (lectura.tipo == TipoMovimiento.ENTRADA) "+" else "−"
-    val etiquetaTipo = if (lectura.tipo == TipoMovimiento.ENTRADA) "Entrada" else "Salida"
+private fun TarjetaLectura(lectura: UltimaLectura, onClick: () -> Unit) {
+    val esAjuste = lectura.tipo == TipoMovimiento.AJUSTE
+    val detalle = when (lectura.tipo) {
+        TipoMovimiento.ENTRADA -> "Entrada +${lectura.cantidad} · stock ${lectura.stockAntes} → ${lectura.stockDespues}"
+        TipoMovimiento.SALIDA -> "Salida −${lectura.cantidad} · stock ${lectura.stockAntes} → ${lectura.stockDespues}"
+        TipoMovimiento.AJUSTE -> "Ajuste · stock ${lectura.stockAntes} → ${lectura.stockDespues}"
+    }
     Row(
         modifier = Modifier
             .fillMaxWidth()
+            .clip(RoundedCornerShape(16.dp))
+            .clickable(onClick = onClick)
             .border(1.dp, Borde, RoundedCornerShape(16.dp))
             .padding(16.dp),
         verticalAlignment = Alignment.CenterVertically
@@ -427,16 +471,24 @@ private fun TarjetaLectura(lectura: UltimaLectura) {
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis
             )
-            Text(
-                "$etiquetaTipo $signo${lectura.cantidad} · stock ${lectura.stockAntes} → ${lectura.stockDespues}",
-                color = TextoSecundario
-            )
+            Text(detalle, color = TextoSecundario)
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(Icons.Outlined.Edit, null, tint = Azul, modifier = Modifier.size(16.dp))
+                Spacer(Modifier.width(6.dp))
+                Text(
+                    if (esAjuste) "Toca para editar el ajuste" else "Toca para cambiar la cantidad",
+                    color = Azul,
+                    fontWeight = FontWeight.Medium
+                )
+            }
         }
-        Spacer(Modifier.width(12.dp))
-        Box(
-            Modifier.background(AzulSuave, CircleShape).padding(horizontal = 16.dp, vertical = 8.dp)
-        ) {
-            Text("×${lectura.cantidad}", color = AzulOscuro, fontWeight = FontWeight.Bold, fontSize = 18.sp)
+        if (!esAjuste) {
+            Spacer(Modifier.width(12.dp))
+            Box(
+                Modifier.background(AzulSuave, CircleShape).padding(horizontal = 16.dp, vertical = 8.dp)
+            ) {
+                Text("×${lectura.cantidad}", color = AzulOscuro, fontWeight = FontWeight.Bold, fontSize = 18.sp)
+            }
         }
     }
 }

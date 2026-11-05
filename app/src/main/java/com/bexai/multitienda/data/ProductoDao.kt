@@ -17,4 +17,7 @@ interface ProductoDao {
     // delta positivo suma stock, negativo resta
     @Query("UPDATE producto SET stock = stock + :delta WHERE id = :id")
     suspend fun sumarStock(id: Int, delta: Int)
+
+    @Query("UPDATE producto SET stock = :stock WHERE id = :id")
+    suspend fun fijarStock(id: Int, stock: Int)
 }
