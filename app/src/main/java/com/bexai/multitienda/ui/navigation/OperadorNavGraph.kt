@@ -3,6 +3,9 @@ package com.bexai.multitienda.ui.navigation
 import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavGraphBuilder
@@ -69,8 +72,10 @@ fun NavGraphBuilder.operadorNavGraph(navController: NavHostController) {
             )
         ) { entrada ->
             val args = entrada.arguments
-            val tipo = TipoMovimiento.valueOf(args?.getString("tipo") ?: TipoMovimiento.ENTRADA.name)
+            val tipoInicial = TipoMovimiento.valueOf(args?.getString("tipo") ?: TipoMovimiento.ENTRADA.name)
             val esConteo = args?.getBoolean("conteo") ?: false
+            // El tipo puede cambiarse desde el chip, por eso es un estado local
+            var tipo by rememberSaveable(tipoInicial) { mutableStateOf(tipoInicial) }
             val escanerViewModel: EscanerViewModel = viewModel()
             val estado by escanerViewModel.uiState.collectAsState()
             EscanerView(
@@ -78,9 +83,17 @@ fun NavGraphBuilder.operadorNavGraph(navController: NavHostController) {
                 esConteo = esConteo,
                 sucursal = "Tienda Centro",
                 estado = estado,
-                onCodigo = { codigo -> escanerViewModel.procesarCodigo(codigo, tipo) },
+                onTipoChange = { nuevo ->
+                    tipo = nuevo
+                    escanerViewModel.reiniciarUltima()
+                },
+                onCodigo = { codigo -> escanerViewModel.procesarCodigo(codigo, tipo, esConteo) },
                 onSinCodigo = { escanerViewModel.avisarSinCodigo() },
                 onNuevaBusqueda = { escanerViewModel.limpiarMensaje() },
+                onAbrirHoja = { escanerViewModel.abrirHojaCantidad() },
+                onCerrarHoja = { escanerViewModel.cerrarHoja() },
+                onDescartarHoja = { escanerViewModel.descartarHoja() },
+                onGuardarHoja = { cantidad, motivo -> escanerViewModel.guardarHoja(cantidad, motivo) },
                 onCerrar = { navController.popBackStack() },
                 onListo = { navController.popBackStack() }
             )
