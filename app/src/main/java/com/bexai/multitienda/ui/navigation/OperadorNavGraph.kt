@@ -17,6 +17,7 @@ import com.bexai.multitienda.ui.view.AccionPantalla
 import com.bexai.multitienda.ui.view.PantallaVacia
 import com.bexai.multitienda.ui.view.operador.EscanerView
 import com.bexai.multitienda.ui.view.operador.InicioOperadorView
+import com.bexai.multitienda.viewmodel.EscanerViewModel
 import com.bexai.multitienda.viewmodel.InicioOperadorViewModel
 
 fun NavGraphBuilder.operadorNavGraph(navController: NavHostController) {
@@ -70,10 +71,16 @@ fun NavGraphBuilder.operadorNavGraph(navController: NavHostController) {
             val args = entrada.arguments
             val tipo = TipoMovimiento.valueOf(args?.getString("tipo") ?: TipoMovimiento.ENTRADA.name)
             val esConteo = args?.getBoolean("conteo") ?: false
+            val escanerViewModel: EscanerViewModel = viewModel()
+            val estado by escanerViewModel.uiState.collectAsState()
             EscanerView(
                 tipo = tipo,
                 esConteo = esConteo,
                 sucursal = "Tienda Centro",
+                estado = estado,
+                onCodigo = { codigo -> escanerViewModel.procesarCodigo(codigo, tipo) },
+                onSinCodigo = { escanerViewModel.avisarSinCodigo() },
+                onNuevaBusqueda = { escanerViewModel.limpiarMensaje() },
                 onCerrar = { navController.popBackStack() },
                 onListo = { navController.popBackStack() }
             )

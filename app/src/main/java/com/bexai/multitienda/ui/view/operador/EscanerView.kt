@@ -9,6 +9,7 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.camera.core.Camera
 import androidx.camera.core.CameraSelector
+import androidx.camera.core.ImageAnalysis
 import androidx.camera.core.Preview
 import androidx.camera.lifecycle.ProcessCameraProvider
 import androidx.camera.view.PreviewView
@@ -50,6 +51,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -60,6 +62,7 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
@@ -68,12 +71,18 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import com.bexai.multitienda.model.TipoMovimiento
+import com.bexai.multitienda.viewmodel.EscanerUiState
+import com.bexai.multitienda.viewmodel.UltimaLectura
+import kotlinx.coroutines.delay
+import java.util.concurrent.Executors
+import java.util.concurrent.atomic.AtomicBoolean
 import com.bexai.multitienda.ui.theme.Advertencia
 import com.bexai.multitienda.ui.theme.AdvertenciaSuave
 import com.bexai.multitienda.ui.theme.Azul
 import com.bexai.multitienda.ui.theme.AzulOscuro
 import com.bexai.multitienda.ui.theme.AzulSuave
 import com.bexai.multitienda.ui.theme.BarraFondo
+import com.bexai.multitienda.ui.theme.Borde
 import com.bexai.multitienda.ui.theme.Celeste
 import com.bexai.multitienda.ui.theme.GrisBarra
 import com.bexai.multitienda.ui.theme.Peligro
@@ -87,6 +96,10 @@ fun EscanerView(
     tipo: TipoMovimiento,
     esConteo: Boolean,
     sucursal: String,
+    estado: EscanerUiState,
+    onCodigo: (String) -> Unit,
+    onSinCodigo: () -> Unit,
+    onNuevaBusqueda: () -> Unit,
     onCerrar: () -> Unit,
     onListo: () -> Unit,
     modifier: Modifier = Modifier
@@ -135,12 +148,33 @@ fun EscanerView(
 
     var linterna by remember { mutableStateOf(false) }
 
+    // Lectura de códigos
+    val pedirLectura = remember { AtomicBoolean(false) }
+    var buscando by remember { mutableStateOf(false) }
+
+    // Límite de búsqueda: si en 5 segundos no hay código, se detiene y se avisa
+    LaunchedEffect(buscando) {
+        if (buscando) {
+            delay(5_000)
+            if (pedirLectura.compareAndSet(true, false)) onSinCodigo()
+            buscando = false
+        }
+    }
+
     Column(modifier.fillMaxSize().background(BarraFondo)) {
 
         // Zona de cámara: ocupa todo lo que sobra arriba del panel
         Box(Modifier.weight(1f).fillMaxWidth()) {
             if (permisoConcedido) {
-                VistaCamara(linterna = linterna, modifier = Modifier.fillMaxSize())
+                VistaCamara(
+                    linterna = linterna,
+                    pedirLectura = pedirLectura,
+                    onCodigo = { codigo ->
+                        buscando = false
+                        onCodigo(codigo)
+                    },
+                    modifier = Modifier.fillMaxSize()
+                )
                 MarcoVisor(Modifier.align(Alignment.Center))
             } else {
                 SinPermiso(
@@ -163,10 +197,15 @@ fun EscanerView(
         // Panel: solo si hay cámara
         if (permisoConcedido) {
             PanelEscaner(
-                lecturas = 0,
+                estado = estado,
+                buscando = buscando,
                 linterna = linterna,
                 onManual = { /* pendiente */ },
-                onDisparo = { /* pendiente: ML Kit */ },
+                onDisparo = {
+                    onNuevaBusqueda()
+                    pedirLectura.set(true)
+                    buscando = true
+                },
                 onFlash = { linterna = !linterna }
             )
         }
@@ -174,9 +213,16 @@ fun EscanerView(
 }
 
 @Composable
-private fun VistaCamara(linterna: Boolean, modifier: Modifier = Modifier) {
+private fun VistaCamara(
+    linterna: Boolean,
+    pedirLectura: AtomicBoolean,
+    onCodigo: (String) -> Unit,
+    modifier: Modifier = Modifier
+) {
     val lifecycleOwner = LocalLifecycleOwner.current
     var camera by remember { mutableStateOf<Camera?>(null) }
+    // El factory solo corre una vez; así siempre llama a la versión más reciente del callback
+    val onCodigoActual by rememberUpdatedState(onCodigo)
 
     LaunchedEffect(camera, linterna) {
         camera?.cameraControl?.enableTorch(linterna)
@@ -192,9 +238,18 @@ private fun VistaCamara(linterna: Boolean, modifier: Modifier = Modifier) {
                 val preview = Preview.Builder().build().also {
                     it.setSurfaceProvider(previewView.surfaceProvider)
                 }
+                val analisis = ImageAnalysis.Builder()
+                    .setBackpressureStrategy(ImageAnalysis.STRATEGY_KEEP_ONLY_LATEST)
+                    .build()
+                    .also {
+                        it.setAnalyzer(
+                            Executors.newSingleThreadExecutor(),
+                            LectorCodigos(pedirLectura) { onCodigoActual(it) }
+                        )
+                    }
                 provider.unbindAll()
                 camera = provider.bindToLifecycle(
-                    lifecycleOwner, CameraSelector.DEFAULT_BACK_CAMERA, preview
+                    lifecycleOwner, CameraSelector.DEFAULT_BACK_CAMERA, preview, analisis
                 )
             }, ContextCompat.getMainExecutor(ctx))
             previewView
@@ -280,7 +335,8 @@ private fun ChipTipo(tipo: TipoMovimiento, esConteo: Boolean) {
 
 @Composable
 private fun PanelEscaner(
-    lecturas: Int,
+    estado: EscanerUiState,
+    buscando: Boolean,
     linterna: Boolean,
     onManual: () -> Unit,
     onDisparo: () -> Unit,
@@ -302,11 +358,26 @@ private fun PanelEscaner(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Text("Escanear código", fontSize = 22.sp, fontWeight = FontWeight.Bold, color = TextoPrincipal)
                 Text(
-                    if (lecturas == 0) "Sin lecturas" else "$lecturas lecturas",
+                    if (estado.ultima == null) "Escanear código" else "Último escaneado",
+                    fontSize = 22.sp, fontWeight = FontWeight.Bold, color = TextoPrincipal
+                )
+                Text(
+                    when (estado.lecturas) {
+                        0 -> "Sin lecturas"
+                        1 -> "1 lectura"
+                        else -> "${estado.lecturas} lecturas"
+                    },
                     color = TextoSecundario
                 )
+            }
+
+            estado.ultima?.let { TarjetaLectura(it) }
+
+            if (buscando) {
+                Text("Buscando código…", color = TextoSecundario)
+            } else if (estado.mensaje != null) {
+                Text(estado.mensaje, color = Peligro, fontWeight = FontWeight.Medium)
             }
 
             Row(
@@ -332,6 +403,40 @@ private fun PanelEscaner(
                     modifier = Modifier.weight(1f)
                 )
             }
+        }
+    }
+}
+
+@Composable
+private fun TarjetaLectura(lectura: UltimaLectura) {
+    val signo = if (lectura.tipo == TipoMovimiento.ENTRADA) "+" else "−"
+    val etiquetaTipo = if (lectura.tipo == TipoMovimiento.ENTRADA) "Entrada" else "Salida"
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .border(1.dp, Borde, RoundedCornerShape(16.dp))
+            .padding(16.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+            Text(
+                lectura.nombre,
+                fontSize = 17.sp,
+                fontWeight = FontWeight.Bold,
+                color = TextoPrincipal,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
+            Text(
+                "$etiquetaTipo $signo${lectura.cantidad} · stock ${lectura.stockAntes} → ${lectura.stockDespues}",
+                color = TextoSecundario
+            )
+        }
+        Spacer(Modifier.width(12.dp))
+        Box(
+            Modifier.background(AzulSuave, CircleShape).padding(horizontal = 16.dp, vertical = 8.dp)
+        ) {
+            Text("×${lectura.cantidad}", color = AzulOscuro, fontWeight = FontWeight.Bold, fontSize = 18.sp)
         }
     }
 }
