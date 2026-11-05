@@ -169,6 +169,36 @@ class EscanerViewModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
+    /**
+     * Botón "Descartar" de la hoja: deshace lo escaneado.
+     * Borra el movimiento (si ya existía) y devuelve el stock al valor de antes.
+     */
+    fun descartarHoja() {
+        val hoja = _uiState.value.hoja ?: return
+        viewModelScope.launch {
+            val movimientoId = hoja.movimientoId
+            if (movimientoId != null) {
+                db.withTransaction {
+                    db.movimientoDao().eliminar(movimientoId)
+                    db.productoDao().fijarStock(hoja.productoId, hoja.stockBase)
+                }
+            }
+            _uiState.update {
+                // Entrada/Salida suman 1 lectura por escaneo; un ajuste guardado cuenta 1
+                val quitar = when {
+                    movimientoId == null -> 0
+                    hoja.esAjuste -> 1
+                    else -> it.ultima?.cantidad ?: 0
+                }
+                it.copy(
+                    lecturas = (it.lecturas - quitar).coerceAtLeast(0),
+                    ultima = if (movimientoId != null) null else it.ultima,
+                    hoja = null
+                )
+            }
+        }
+    }
+
     private suspend fun guardarCambioCantidad(hoja: HojaCantidad, cantidad: Int) {
         val movimientoId = hoja.movimientoId ?: return
         val signo = if (hoja.tipo == TipoMovimiento.ENTRADA) 1 else -1

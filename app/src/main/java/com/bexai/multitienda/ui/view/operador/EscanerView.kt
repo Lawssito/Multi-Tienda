@@ -107,6 +107,7 @@ fun EscanerView(
     onNuevaBusqueda: () -> Unit,
     onAbrirHoja: () -> Unit,
     onCerrarHoja: () -> Unit,
+    onDescartarHoja: () -> Unit,
     onGuardarHoja: (Int, String) -> Unit,
     onCerrar: () -> Unit,
     onListo: () -> Unit,
@@ -223,7 +224,12 @@ fun EscanerView(
 
     // Hoja inferior: Cambiar cantidad o Ajuste
     estado.hoja?.let { hoja ->
-        HojaCantidadView(hoja = hoja, onCerrar = onCerrarHoja, onGuardar = onGuardarHoja)
+        HojaCantidadView(
+            hoja = hoja,
+            onCerrar = onCerrarHoja,
+            onDescartar = onDescartarHoja,
+            onGuardar = onGuardarHoja
+        )
     }
 }
 

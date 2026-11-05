@@ -1,5 +1,6 @@
 package com.bexai.multitienda.ui.view.operador
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -30,6 +31,7 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.rememberModalBottomSheetState
@@ -53,12 +55,17 @@ import com.bexai.multitienda.ui.theme.Azul
 import com.bexai.multitienda.ui.theme.AzulOscuro
 import com.bexai.multitienda.ui.theme.AzulSuave
 import com.bexai.multitienda.ui.theme.Peligro
+import com.bexai.multitienda.ui.theme.PeligroSuave
 import com.bexai.multitienda.ui.theme.SuperficieVariante
 import com.bexai.multitienda.ui.theme.TextoPrincipal
 import com.bexai.multitienda.ui.theme.TextoSecundario
 import com.bexai.multitienda.viewmodel.HojaCantidad
 
 private const val MAXIMO_MOTIVO = 120
+private const val OTRO = "Otro"
+
+/** Motivos de ajuste de un toque. "Otro" pide escribir el motivo. */
+private val MOTIVOS_AJUSTE = listOf("Merma", "Dañado", "Contado mal", OTRO)
 
 /**
  * Hoja inferior para escribir una cantidad.
@@ -70,10 +77,24 @@ private const val MAXIMO_MOTIVO = 120
 fun HojaCantidadView(
     hoja: HojaCantidad,
     onCerrar: () -> Unit,
+    onDescartar: () -> Unit,
     onGuardar: (cantidad: Int, motivo: String) -> Unit
 ) {
     var texto by remember(hoja) { mutableStateOf(hoja.cantidadInicial.toString()) }
-    var motivo by remember(hoja) { mutableStateOf(hoja.motivoInicial) }
+    // Si el motivo guardado es uno de los botones, se marca; si no, era "Otro" con texto
+    var opcion by remember(hoja) {
+        mutableStateOf(
+            when {
+                hoja.motivoInicial.isBlank() -> null
+                hoja.motivoInicial in MOTIVOS_AJUSTE -> hoja.motivoInicial
+                else -> OTRO
+            }
+        )
+    }
+    var motivoOtro by remember(hoja) {
+        mutableStateOf(if (hoja.motivoInicial in MOTIVOS_AJUSTE) "" else hoja.motivoInicial)
+    }
+    val motivo = if (opcion == OTRO) motivoOtro.trim() else opcion.orEmpty()
 
     val cantidad = texto.toIntOrNull() ?: 0
     val signo = if (hoja.tipo == TipoMovimiento.ENTRADA) 1 else -1
@@ -81,7 +102,7 @@ fun HojaCantidadView(
     val minimo = if (hoja.esAjuste) 0 else 1
     val maximo = if (esSalida) hoja.stockBase else 9999
     val cantidadValida = texto.isNotEmpty() && cantidad in minimo..maximo
-    val motivoValido = !hoja.esAjuste || motivo.trim().isNotEmpty()
+    val motivoValido = !hoja.esAjuste || motivo.isNotEmpty()
     val resultado = if (hoja.esAjuste) cantidad else hoja.stockBase + signo * cantidad
 
     val titulo = when {
@@ -211,32 +232,67 @@ fun HojaCantidadView(
                     Text("¿Por qué ajustas? ", fontWeight = FontWeight.Bold, fontSize = 18.sp, color = TextoPrincipal)
                     Text("*", fontWeight = FontWeight.Bold, fontSize = 18.sp, color = Peligro)
                 }
-                OutlinedTextField(
-                    value = motivo,
-                    onValueChange = { motivo = it.take(MAXIMO_MOTIVO) },
-                    modifier = Modifier.fillMaxWidth(),
-                    placeholder = { Text("Ej.: Conté 3 de más en la mañana") },
-                    singleLine = true,
-                    shape = RoundedCornerShape(20.dp)
-                )
-                Text(
-                    "Obligatorio · máximo $MAXIMO_MOTIVO caracteres (${motivo.length}/$MAXIMO_MOTIVO)",
-                    color = TextoSecundario
-                )
+                // Botones de un toque, en 2 filas de 2
+                MOTIVOS_AJUSTE.chunked(2).forEach { fila ->
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(10.dp)
+                    ) {
+                        fila.forEach { op ->
+                            BotonMotivo(
+                                texto = op,
+                                seleccionado = opcion == op,
+                                onClick = { opcion = op },
+                                modifier = Modifier.weight(1f)
+                            )
+                        }
+                    }
+                }
+                if (opcion == OTRO) {
+                    OutlinedTextField(
+                        value = motivoOtro,
+                        onValueChange = { motivoOtro = it.take(MAXIMO_MOTIVO) },
+                        modifier = Modifier.fillMaxWidth(),
+                        placeholder = { Text("Escribe el motivo") },
+                        singleLine = true,
+                        shape = RoundedCornerShape(20.dp)
+                    )
+                    Text(
+                        "Obligatorio · ${motivoOtro.length}/$MAXIMO_MOTIVO caracteres",
+                        color = TextoSecundario
+                    )
+                }
             }
 
-            Button(
-                onClick = { onGuardar(cantidad, motivo) },
-                enabled = cantidadValida && motivoValido,
-                modifier = Modifier.fillMaxWidth().height(56.dp),
-                shape = RoundedCornerShape(20.dp),
-                colors = ButtonDefaults.buttonColors(containerColor = Azul)
+            // Descartar (rojo) y Guardar, lado a lado
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-                Text(
-                    if (hoja.esAjuste) "Ajustar a $cantidad" else "Guardar $cantidad unidades",
-                    fontSize = 18.sp,
-                    fontWeight = FontWeight.Bold
-                )
+                OutlinedButton(
+                    onClick = onDescartar,
+                    modifier = Modifier.weight(1f).height(56.dp),
+                    shape = RoundedCornerShape(20.dp),
+                    border = BorderStroke(1.dp, Peligro),
+                    colors = ButtonDefaults.outlinedButtonColors(
+                        containerColor = PeligroSuave,
+                        contentColor = Peligro
+                    )
+                ) { Text("Descartar", fontSize = 18.sp, fontWeight = FontWeight.Bold) }
+
+                Button(
+                    onClick = { onGuardar(cantidad, motivo) },
+                    enabled = cantidadValida && motivoValido,
+                    modifier = Modifier.weight(1f).height(56.dp),
+                    shape = RoundedCornerShape(20.dp),
+                    colors = ButtonDefaults.buttonColors(containerColor = Azul)
+                ) {
+                    Text(
+                        if (hoja.esAjuste) "Ajustar a $cantidad" else "Guardar $cantidad",
+                        fontSize = 18.sp,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
             }
         }
     }
@@ -257,4 +313,26 @@ private fun BotonContador(
             .clickable(onClick = onClick),
         contentAlignment = Alignment.Center
     ) { Icon(icono, contentDescription = descripcion, tint = colorIcono) }
+}
+
+@Composable
+private fun BotonMotivo(
+    texto: String,
+    seleccionado: Boolean,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Box(
+        modifier = modifier
+            .background(if (seleccionado) Azul else SuperficieVariante, RoundedCornerShape(20.dp))
+            .clickable(onClick = onClick)
+            .padding(vertical = 14.dp),
+        contentAlignment = Alignment.Center
+    ) {
+        Text(
+            texto,
+            fontWeight = FontWeight.Bold,
+            color = if (seleccionado) Color.White else TextoPrincipal
+        )
+    }
 }

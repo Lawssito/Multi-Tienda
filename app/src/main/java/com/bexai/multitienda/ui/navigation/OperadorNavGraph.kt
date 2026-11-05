@@ -92,6 +92,7 @@ fun NavGraphBuilder.operadorNavGraph(navController: NavHostController) {
                 onNuevaBusqueda = { escanerViewModel.limpiarMensaje() },
                 onAbrirHoja = { escanerViewModel.abrirHojaCantidad() },
                 onCerrarHoja = { escanerViewModel.cerrarHoja() },
+                onDescartarHoja = { escanerViewModel.descartarHoja() },
                 onGuardarHoja = { cantidad, motivo -> escanerViewModel.guardarHoja(cantidad, motivo) },
                 onCerrar = { navController.popBackStack() },
                 onListo = { navController.popBackStack() }
