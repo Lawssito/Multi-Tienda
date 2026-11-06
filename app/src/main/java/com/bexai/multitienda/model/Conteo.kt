@@ -7,7 +7,7 @@ import androidx.room.PrimaryKey
 data class Conteo(
     @PrimaryKey(autoGenerate = true)
     val id: Int = 0,
-    val ubicacionId: Int,
+    val sucursalId: Int,
     val estado: EstadoConteo = EstadoConteo.EN_CURSO,
     val fechaInicio: Long,        // milisegundos
     val fechaEnvio: Long? = null  // se llena al enviarlo al encargado

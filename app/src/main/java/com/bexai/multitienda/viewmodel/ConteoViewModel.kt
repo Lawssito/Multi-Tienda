@@ -5,6 +5,7 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.room.withTransaction
 import com.bexai.multitienda.data.AppDatabase
+import com.bexai.multitienda.data.SesionSucursal
 import com.bexai.multitienda.model.Conteo
 import com.bexai.multitienda.model.EstadoConteo
 import com.bexai.multitienda.model.LineaConteo
@@ -44,7 +45,7 @@ class ConteoViewModel(app: Application) : AndroidViewModel(app) {
 
     private val db = AppDatabase.obtener(app)
     private val dao = db.conteoDao()
-    private val ubicacionId = 1   // temporal: luego saldrá del usuario logueado
+    private val sucursalId: Int get() = SesionSucursal.id   // la que eligió el operador
 
     private val conteoId = MutableStateFlow<Int?>(null)
     private val horaInicio = MutableStateFlow("")
@@ -52,7 +53,7 @@ class ConteoViewModel(app: Application) : AndroidViewModel(app) {
     init {
         // Retoma el conteo en curso de la sucursal; si no hay, crea uno nuevo
         viewModelScope.launch {
-            val existente = dao.enCurso(ubicacionId)
+            val existente = dao.enCurso(sucursalId)
             val id: Int
             val inicio: Long
             if (existente != null) {
@@ -62,7 +63,7 @@ class ConteoViewModel(app: Application) : AndroidViewModel(app) {
                 inicio = System.currentTimeMillis()
                 // Crea el conteo y congela el stock de todos los productos, todo o nada
                 id = db.withTransaction {
-                    val nuevo = dao.insertar(Conteo(ubicacionId = ubicacionId, fechaInicio = inicio)).toInt()
+                    val nuevo = dao.insertar(Conteo(sucursalId = sucursalId, fechaInicio = inicio)).toInt()
                     dao.congelarStock(nuevo)
                     nuevo
                 }

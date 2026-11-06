@@ -34,15 +34,15 @@ interface MovimientoDao {
             COUNT(*) AS movimientos,
             COALESCE(SUM(CASE WHEN tipo = 'AJUSTE' AND motivo = 'Conteo masivo' THEN 1 ELSE 0 END), 0) AS contados
         FROM movimiento
-        WHERE ubicacionId = :ubicacionId AND fechaHora >= :desde
+        WHERE sucursalId = :sucursalId AND fechaHora >= :desde
     """)
-    fun resumenDelDia(ubicacionId: Int, desde: Long): Flow<ResumenDia>
+    fun resumenDelDia(sucursalId: Int, desde: Long): Flow<ResumenDia>
 
     @Query("SELECT * FROM movimiento ORDER BY fechaHora DESC LIMIT :limite")
     fun listarHistorial(limite: Int = 100): Flow<List<Movimiento>>
 
-    @Query("SELECT * FROM movimiento WHERE ubicacionId = :ubicacionId ORDER BY fechaHora DESC LIMIT :limite")
-    fun listarPorUbicacion(ubicacionId: Int, limite: Int = 100): Flow<List<Movimiento>>
+    @Query("SELECT * FROM movimiento WHERE sucursalId = :sucursalId ORDER BY fechaHora DESC LIMIT :limite")
+    fun listarPorSucursal(sucursalId: Int, limite: Int = 100): Flow<List<Movimiento>>
 
     @Query("""
         SELECT

@@ -5,6 +5,7 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.room.withTransaction
 import com.bexai.multitienda.data.AppDatabase
+import com.bexai.multitienda.data.SesionSucursal
 import com.bexai.multitienda.model.ConteoDetalle
 import com.bexai.multitienda.model.Movimiento
 import com.bexai.multitienda.model.Producto
@@ -58,7 +59,7 @@ data class EscanerUiState(
 class EscanerViewModel(app: Application) : AndroidViewModel(app) {
 
     private val db = AppDatabase.obtener(app)
-    private val ubicacionId = 1   // temporal: luego saldrá del usuario logueado
+    private val sucursalId: Int get() = SesionSucursal.id   // la que eligió el operador
 
     private val _uiState = MutableStateFlow(EscanerUiState())
     val uiState: StateFlow<EscanerUiState> = _uiState.asStateFlow()
@@ -144,7 +145,7 @@ class EscanerViewModel(app: Application) : AndroidViewModel(app) {
                     val id = db.movimientoDao().insertar(
                         Movimiento(
                             productoId = producto.id,
-                            ubicacionId = ubicacionId,
+                            sucursalId = sucursalId,
                             tipo = tipo,
                             cantidad = 1,
                             fechaHora = System.currentTimeMillis()
@@ -248,7 +249,7 @@ class EscanerViewModel(app: Application) : AndroidViewModel(app) {
                 return@launch
             }
             val conteoDao = db.conteoDao()
-            val conteo = conteoDao.enCurso(ubicacionId)
+            val conteo = conteoDao.enCurso(sucursalId)
             if (conteo == null) {
                 avisar("No hay un conteo en curso. Vuelve e inicia el conteo.")
                 return@launch
@@ -302,7 +303,7 @@ class EscanerViewModel(app: Application) : AndroidViewModel(app) {
     private suspend fun guardarConteo(hoja: HojaCantidad, contado: Int) {
         if (contado < 0) return
         val conteoDao = db.conteoDao()
-        val conteo = conteoDao.enCurso(ubicacionId) ?: return
+        val conteo = conteoDao.enCurso(sucursalId) ?: return
         val detalle = conteoDao.buscarDetalle(conteo.id, hoja.productoId) ?: return
         conteoDao.guardarDetalle(detalle.copy(contado = contado, actualizado = System.currentTimeMillis()))
         _uiState.update {
@@ -315,7 +316,7 @@ class EscanerViewModel(app: Application) : AndroidViewModel(app) {
 
     private suspend fun descartarLineaConteo(hoja: HojaCantidad) {
         val conteoDao = db.conteoDao()
-        val conteo = conteoDao.enCurso(ubicacionId)
+        val conteo = conteoDao.enCurso(sucursalId)
         if (conteo != null) {
             if (hoja.baseConteo > 0) {
                 // Ya estaba contado antes de esta tanda: vuelve a ese valor
@@ -364,7 +365,7 @@ class EscanerViewModel(app: Application) : AndroidViewModel(app) {
                 db.movimientoDao().insertar(
                     Movimiento(
                         productoId = hoja.productoId,
-                        ubicacionId = ubicacionId,
+                        sucursalId = sucursalId,
                         tipo = TipoMovimiento.AJUSTE,
                         cantidad = total,          // el ajuste guarda la nueva cantidad
                         motivo = motivo,

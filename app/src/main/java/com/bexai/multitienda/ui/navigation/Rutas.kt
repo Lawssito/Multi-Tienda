@@ -18,6 +18,7 @@ sealed class Ruta(val ruta: String) {
     data object Login : Ruta("login")
 
     // Pantallas del grafo de operador (las completa la Persona A).
+    data object OperadorSucursal : Ruta("operador/sucursal")
     data object OperadorInicio : Ruta("operador/inicio")
     data object OperadorEscaner : Ruta("operador/escaner") {
         // Patrón que registra el grafo (ambos argumentos son opcionales)
