@@ -28,6 +28,8 @@ sealed class Ruta(val ruta: String) {
             "operador/escaner?tipo=${tipo.name}&conteo=$conteo"
     }
     data object OperadorCuenta : Ruta("operador/cuenta")
+    data object OperadorConteo : Ruta("operador/conteo")
+    data object OperadorResumenConteo : Ruta("operador/conteo/resumen")
 
     // Pantalla del grafo de encargado
     data object EncargadoInicio : Ruta("encargado/inicio")
