@@ -7,6 +7,12 @@ import com.bexai.multitienda.model.Movimiento
 import com.bexai.multitienda.model.ResumenDia
 import kotlinx.coroutines.flow.Flow
 
+data class ResumenMovimientoProducto(
+    val productoId: Int,
+    val cantidad: Int,
+    val fecha: Long
+)
+
 @Dao
 interface MovimientoDao {
     @Insert
@@ -31,4 +37,28 @@ interface MovimientoDao {
         WHERE ubicacionId = :ubicacionId AND fechaHora >= :desde
     """)
     fun resumenDelDia(ubicacionId: Int, desde: Long): Flow<ResumenDia>
+
+    @Query("SELECT * FROM movimiento ORDER BY fechaHora DESC LIMIT :limite")
+    fun listarHistorial(limite: Int = 100): Flow<List<Movimiento>>
+
+    @Query("SELECT * FROM movimiento WHERE ubicacionId = :ubicacionId ORDER BY fechaHora DESC LIMIT :limite")
+    fun listarPorUbicacion(ubicacionId: Int, limite: Int = 100): Flow<List<Movimiento>>
+
+    @Query("""
+        SELECT
+            COALESCE(SUM(CASE WHEN tipo = 'ENTRADA' THEN cantidad ELSE 0 END), 0) AS entradas,
+            COALESCE(SUM(CASE WHEN tipo = 'SALIDA' THEN cantidad ELSE 0 END), 0) AS salidas,
+            COUNT(*) AS movimientos,
+            COALESCE(SUM(CASE WHEN tipo = 'AJUSTE' AND motivo = 'Conteo masivo' THEN 1 ELSE 0 END), 0) AS contados
+        FROM movimiento
+        WHERE fechaHora >= :desde
+    """)
+    fun resumenGlobal(desde: Long): Flow<ResumenDia>
+
+    @Query("""
+        SELECT productoId, COUNT(*) AS cantidad, MAX(fechaHora) AS fecha FROM movimiento
+        GROUP BY productoId
+        ORDER BY fecha DESC
+    """)
+    fun listarMovimientosPorProducto(): Flow<List<ResumenMovimientoProducto>>
 }

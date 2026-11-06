@@ -31,9 +31,14 @@ sealed class Ruta(val ruta: String) {
 
     // Pantalla del grafo de encargado
     data object EncargadoInicio : Ruta("encargado/inicio")
+    data object EncargadoStock : Ruta("encargado/stock")
+    data object EncargadoDiferencias : Ruta("encargado/diferencias")
+    data object EncargadoAlertasReposicion : Ruta("encargado/alertas-reposicion")
 
     // Pantallas del grafo de gerencia.
     data object GerenciaInicio : Ruta("gerencia/inicio")
+    data object GerenciaAuditoria : Ruta("gerencia/auditoria")
+    data object GerenciaGestionTiendas : Ruta("gerencia/gestion-tiendas")
     data object GerenciaReportes : Ruta("gerencia/reportes")
 
     companion object {
