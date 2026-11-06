@@ -3,9 +3,11 @@ package com.bexai.multitienda.ui.navigation
 import androidx.navigation.NavGraphBuilder
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.composable
-import androidx.navigation.compose.navigation
-import com.bexai.multitienda.ui.view.AccionPantalla
-import com.bexai.multitienda.ui.view.PantallaVacia
+import androidx.navigation.navigation
+import com.bexai.multitienda.ui.view.gerencia.AuditoriaStockView
+import com.bexai.multitienda.ui.view.gerencia.GerenciaDashboardView
+import com.bexai.multitienda.ui.view.gerencia.GestionTiendasView
+import com.bexai.multitienda.ui.view.gerencia.ReportesView
 
 fun NavGraphBuilder.gerenciaNavGraph(navController: NavHostController) {
     navigation(
@@ -13,38 +15,24 @@ fun NavGraphBuilder.gerenciaNavGraph(navController: NavHostController) {
         route = Ruta.GRAFO_GERENCIA
     ) {
         composable(Ruta.GerenciaInicio.ruta) {
-            PantallaVacia(
-                titulo = "Inicio gestión",
-                descripcion = "Grafo de gestión. Pantalla vacía de prueba.",
-                acciones = listOf(
-                    AccionPantalla(
-                        texto = "Ir a reportes",
-                        alHacerClic = {
-                            navController.navigate(Ruta.GerenciaInicio.ruta)
-                        }
-                    ),
-                    AccionPantalla(
-                        texto = "Volver al login",
-                        alHacerClic = {
-                            navController.navigate(Ruta.Login.ruta) {
-                                popUpTo(navController.graph.id) { inclusive = true }
-                            }
-                        }
-                    )
-                )
-            )
+            ConBarraGerencia(navController) {
+                GerenciaDashboardView(navController)
+            }
+        }
+        composable(Ruta.GerenciaAuditoria.ruta) {
+            ConBarraGerencia(navController) {
+                AuditoriaStockView(navController)
+            }
+        }
+        composable(Ruta.GerenciaGestionTiendas.ruta) {
+            ConBarraGerencia(navController) {
+                GestionTiendasView(navController)
+            }
         }
         composable(Ruta.GerenciaReportes.ruta) {
-            PantallaVacia(
-                titulo = "Reportes",
-                descripcion = "Pantalla vacía de reportes para probar la navegación.",
-                acciones = listOf(
-                    AccionPantalla(
-                        texto = "Volver",
-                        alHacerClic = { navController.popBackStack() }
-                    )
-                )
-            )
+            ConBarraGerencia(navController) {
+                ReportesView(navController)
+            }
         }
     }
 }
