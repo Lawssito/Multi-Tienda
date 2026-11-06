@@ -34,13 +34,13 @@ class ConteoRepository(private val db: AppDatabase) {
     private val movimientoDao = db.movimientoDao()
     private val productoDao = db.productoDao()
 
-    fun enviados(ubicacionId: Int): Flow<List<Conteo>> = conteoDao.enviados(ubicacionId)
+    fun enviados(sucursalId: Int): Flow<List<Conteo>> = conteoDao.enviados(sucursalId)
 
     /** Líneas contadas cuya diferencia (contado - sistema) no es cero. */
     fun diferencias(conteoId: Int): Flow<List<LineaConteo>> =
         conteoDao.lineas(conteoId).map { lineas -> lineas.filter { it.diferencia != 0 } }
 
-    suspend fun ultimoEnviado(ubicacionId: Int): Conteo? = conteoDao.ultimoEnviado(ubicacionId)
+    suspend fun ultimoEnviado(sucursalId: Int): Conteo? = conteoDao.ultimoEnviado(sucursalId)
 
     /** @return true si se aprobó; false si el conteo no existe o no estaba ENVIADO. */
     suspend fun aprobar(conteoId: Int): Boolean = db.withTransaction {
@@ -54,7 +54,7 @@ class ConteoRepository(private val db: AppDatabase) {
                 movimientoDao.insertar(
                     Movimiento(
                         productoId = linea.productoId,
-                        ubicacionId = conteo.ubicacionId,
+                        sucursalId = conteo.sucursalId,
                         tipo = TipoMovimiento.AJUSTE,
                         cantidad = linea.contado,      // el ajuste guarda la nueva cantidad
                         motivo = "Conteo masivo",

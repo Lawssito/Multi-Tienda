@@ -17,7 +17,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavHostController
-import com.bexai.multitienda.model.Ubicacion
+import com.bexai.multitienda.model.Sucursal
 import com.bexai.multitienda.ui.navigation.Ruta
 import com.bexai.multitienda.ui.theme.*
 import com.bexai.multitienda.viewmodel.GerenciaViewModel
@@ -228,7 +228,7 @@ fun GestionTiendasView(
 
 @Composable
 private fun TiendaCard(
-    tienda: Ubicacion,
+    tienda: Sucursal,
     onToggleActiva: (Boolean) -> Unit,
     onEliminar: () -> Unit
 ) {

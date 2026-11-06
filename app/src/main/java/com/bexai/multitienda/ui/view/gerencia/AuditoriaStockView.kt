@@ -337,7 +337,7 @@ private fun ItemHistorialCard(mov: Movimiento, prod: Producto?) {
                 )
 
                 Text(
-                    text = "Fecha: $fechaStr • Ubicación #${mov.ubicacionId}",
+                    text = "Fecha: $fechaStr • Sucursal #${mov.sucursalId}",
                     fontSize = 11.sp,
                     color = TextoSecundario
                 )

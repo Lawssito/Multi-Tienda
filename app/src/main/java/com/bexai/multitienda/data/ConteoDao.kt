@@ -15,8 +15,8 @@ interface ConteoDao {
     @Insert
     suspend fun insertar(conteo: Conteo): Long
 
-    @Query("SELECT * FROM Conteo WHERE ubicacionId = :ubicacionId AND estado = 'EN_CURSO' LIMIT 1")
-    suspend fun enCurso(ubicacionId: Int): Conteo?
+    @Query("SELECT * FROM Conteo WHERE sucursalId = :sucursalId AND estado = 'EN_CURSO' LIMIT 1")
+    suspend fun enCurso(sucursalId: Int): Conteo?
 
     @Query("SELECT * FROM ConteoDetalle WHERE conteoId = :conteoId AND productoId = :productoId LIMIT 1")
     suspend fun buscarDetalle(conteoId: Int, productoId: Int): ConteoDetalle?
@@ -65,11 +65,11 @@ interface ConteoDao {
     suspend fun buscar(id: Int): Conteo?
 
     // Conteos esperando revisión del encargado, el más reciente primero
-    @Query("SELECT * FROM Conteo WHERE ubicacionId = :ubicacionId AND estado = 'ENVIADO' ORDER BY fechaEnvio DESC")
-    fun enviados(ubicacionId: Int): Flow<List<Conteo>>
+    @Query("SELECT * FROM Conteo WHERE sucursalId = :sucursalId AND estado = 'ENVIADO' ORDER BY fechaEnvio DESC")
+    fun enviados(sucursalId: Int): Flow<List<Conteo>>
 
-    @Query("SELECT * FROM Conteo WHERE ubicacionId = :ubicacionId AND estado = 'ENVIADO' ORDER BY fechaEnvio DESC LIMIT 1")
-    suspend fun ultimoEnviado(ubicacionId: Int): Conteo?
+    @Query("SELECT * FROM Conteo WHERE sucursalId = :sucursalId AND estado = 'ENVIADO' ORDER BY fechaEnvio DESC LIMIT 1")
+    suspend fun ultimoEnviado(sucursalId: Int): Conteo?
 
     // Igual que lineas(), pero una sola lectura (para aprobar dentro de una transacción)
     @Query("""

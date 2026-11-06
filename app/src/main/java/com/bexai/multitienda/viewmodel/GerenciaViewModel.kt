@@ -8,7 +8,7 @@ import com.bexai.multitienda.data.DemoDataSeeder
 import com.bexai.multitienda.model.Movimiento
 import com.bexai.multitienda.model.Producto
 import com.bexai.multitienda.model.ResumenDia
-import com.bexai.multitienda.model.Ubicacion
+import com.bexai.multitienda.model.Sucursal
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.map
@@ -57,7 +57,7 @@ class GerenciaViewModel(app: Application) : AndroidViewModel(app) {
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
     // Tiendas / Sucursales
-    val tiendas: StateFlow<List<Ubicacion>> = db.ubicacionDao().listar()
+    val tiendas: StateFlow<List<Sucursal>> = db.sucursalDao().listar()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
     val totalTiendasActivas: StateFlow<Int> = tiendas.map { lista ->
@@ -76,15 +76,15 @@ class GerenciaViewModel(app: Application) : AndroidViewModel(app) {
 
     fun cambiarEstadoTienda(id: Int, nuevaActiva: Boolean) {
         viewModelScope.launch {
-            db.ubicacionDao().actualizarActiva(id, nuevaActiva)
+            db.sucursalDao().actualizarActiva(id, nuevaActiva)
         }
     }
 
     fun agregarTienda(nombre: String, direccion: String, onExito: () -> Unit) {
         if (nombre.isBlank() || direccion.isBlank()) return
         viewModelScope.launch {
-            db.ubicacionDao().insertar(
-                Ubicacion(
+            db.sucursalDao().insertar(
+                Sucursal(
                     nombre = nombre.trim(),
                     direccion = direccion.trim(),
                     activa = true,
@@ -97,7 +97,7 @@ class GerenciaViewModel(app: Application) : AndroidViewModel(app) {
 
     fun eliminarTienda(id: Int) {
         viewModelScope.launch {
-            db.ubicacionDao().eliminarPorId(id)
+            db.sucursalDao().eliminarPorId(id)
         }
     }
 

@@ -5,11 +5,11 @@ import androidx.room.PrimaryKey
 import java.util.Date
 
 /**
- * Ubicacion: representa una sucursal o tienda física.
+ * Sucursal: representa una sucursal o tienda física.
  * active = false significa deshabilitada.
  */
-@Entity(tableName = "ubicaciones")
-data class Ubicacion(
+@Entity(tableName = "sucursales")
+data class Sucursal(
     @PrimaryKey(autoGenerate = true)
     val id: Int = 0,
     val nombre: String,

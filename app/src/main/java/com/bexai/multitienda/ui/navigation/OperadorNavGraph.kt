@@ -27,15 +27,31 @@ import com.bexai.multitienda.ui.view.operador.ConteoView
 import com.bexai.multitienda.ui.view.operador.EscanerView
 import com.bexai.multitienda.ui.view.operador.InicioOperadorView
 import com.bexai.multitienda.ui.view.operador.ResumenConteoView
+import com.bexai.multitienda.ui.view.operador.SeleccionarSucursalView
 import com.bexai.multitienda.viewmodel.ConteoViewModel
 import com.bexai.multitienda.viewmodel.EscanerViewModel
 import com.bexai.multitienda.viewmodel.InicioOperadorViewModel
+import com.bexai.multitienda.viewmodel.SeleccionarSucursalViewModel
 
 fun NavGraphBuilder.operadorNavGraph(navController: NavHostController) {
     navigation(
-        startDestination = Ruta.OperadorInicio.ruta,
+        startDestination = Ruta.OperadorSucursal.ruta,
         route = Ruta.GRAFO_OPERADOR
     ) {
+        composable(Ruta.OperadorSucursal.ruta) {
+            val viewModel: SeleccionarSucursalViewModel = viewModel()
+            val sucursales by viewModel.sucursales.collectAsState()
+            SeleccionarSucursalView(
+                sucursales = sucursales,
+                onElegir = { sucursal ->
+                    viewModel.elegir(sucursal)
+                    navController.navigate(Ruta.OperadorInicio.ruta) {
+                        popUpTo(Ruta.OperadorSucursal.ruta) { inclusive = true }
+                        launchSingleTop = true
+                    }
+                }
+            )
+        }
         composable(Ruta.OperadorInicio.ruta) { entrada ->
             val viewModel : InicioOperadorViewModel = viewModel()
             val estado by viewModel.uiState.collectAsState()
@@ -104,6 +120,9 @@ fun NavGraphBuilder.operadorNavGraph(navController: NavHostController) {
                     titulo = "Cuenta",
                     descripcion = "Datos del usuario y cerrar sesión.",
                     acciones = listOf(
+                        AccionPantalla("Cambiar de sucursal") {
+                            navController.navigate(Ruta.OperadorSucursal.ruta)
+                        },
                         AccionPantalla("Cerrar sesión") {
                             navController.navigate(Ruta.Login.ruta) {
                                 popUpTo(navController.graph.id) { inclusive = true }

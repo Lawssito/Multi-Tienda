@@ -10,7 +10,7 @@ import com.bexai.multitienda.model.Conteo
 import com.bexai.multitienda.model.ConteoDetalle
 import com.bexai.multitienda.model.Movimiento
 import com.bexai.multitienda.model.Producto
-import com.bexai.multitienda.model.Ubicacion
+import com.bexai.multitienda.model.Sucursal
 import com.bexai.multitienda.model.Usuario
 import java.util.Date
 
@@ -28,7 +28,7 @@ class ConvertidoresAe {
         Usuario::class,
         Producto::class,
         Movimiento::class,
-        Ubicacion::class,
+        Sucursal::class,
         Conteo::class,
         ConteoDetalle::class
     ],
@@ -38,7 +38,7 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun usuarioDao(): UsuarioDao
     abstract fun movimientoDao(): MovimientoDao
     abstract fun productoDao(): ProductoDao
-    abstract fun ubicacionDao(): UbicacionDao
+    abstract fun sucursalDao(): SucursalDao
     abstract fun conteoDao(): ConteoDao
 
     companion object {

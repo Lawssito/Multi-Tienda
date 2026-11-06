@@ -12,7 +12,7 @@ import com.bexai.multitienda.model.LineaConteo
 import com.bexai.multitienda.model.Movimiento
 import com.bexai.multitienda.model.Producto
 import com.bexai.multitienda.model.TipoMovimiento
-import com.bexai.multitienda.model.Ubicacion
+import com.bexai.multitienda.model.Sucursal
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -49,7 +49,7 @@ class EncargadoViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     // Tiendas / Sucursales
-    val sucursales: StateFlow<List<Ubicacion>> = db.ubicacionDao().listar()
+    val sucursales: StateFlow<List<Sucursal>> = db.sucursalDao().listar()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
     private val _sucursalSeleccionadaId = MutableStateFlow<Int?>(null)
@@ -185,7 +185,7 @@ class EncargadoViewModel(app: Application) : AndroidViewModel(app) {
         viewModelScope.launch {
             val stockAnterior = producto.stock
             val dif = stockContado - stockAnterior
-            val ubicacion = _sucursalSeleccionadaId.value ?: 1
+            val sucursal = _sucursalSeleccionadaId.value ?: 1
 
             // 1. Fijar nuevo stock en Producto
             db.productoDao().fijarStock(producto.id, stockContado)
@@ -195,7 +195,7 @@ class EncargadoViewModel(app: Application) : AndroidViewModel(app) {
             db.movimientoDao().insertar(
                 Movimiento(
                     productoId = producto.id,
-                    ubicacionId = ubicacion,
+                    sucursalId = sucursal,
                     tipo = TipoMovimiento.AJUSTE,
                     cantidad = stockContado,
                     motivo = motivoTexto,
@@ -229,7 +229,7 @@ class EncargadoViewModel(app: Application) : AndroidViewModel(app) {
             db.movimientoDao().insertar(
                 Movimiento(
                     productoId = ajuste.productoId,
-                    ubicacionId = _sucursalSeleccionadaId.value ?: 1,
+                    sucursalId = _sucursalSeleccionadaId.value ?: 1,
                     tipo = TipoMovimiento.AJUSTE,
                     cantidad = ajuste.stockAnterior,
                     motivo = "Deshacer ajuste previo (${ajuste.stockNuevo} -> ${ajuste.stockAnterior})",

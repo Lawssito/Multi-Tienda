@@ -3,7 +3,7 @@ package com.bexai.multitienda.data
 import com.bexai.multitienda.model.Movimiento
 import com.bexai.multitienda.model.Producto
 import com.bexai.multitienda.model.TipoMovimiento
-import com.bexai.multitienda.model.Ubicacion
+import com.bexai.multitienda.model.Sucursal
 import java.util.Date
 
 /**
@@ -13,25 +13,25 @@ import java.util.Date
 object DemoDataSeeder {
     suspend fun sembrar(db: AppDatabase) {
         // 1. Tiendas iniciales
-        if (db.ubicacionDao().contar() == 0) {
-            db.ubicacionDao().insertar(
-                Ubicacion(
+        if (db.sucursalDao().contar() == 0) {
+            db.sucursalDao().insertar(
+                Sucursal(
                     nombre = "Sucursal Centro",
                     direccion = "Av. Libertador Bernardo O'Higgins 1020, Santiago",
                     activa = true,
                     fechaCreacion = Date()
                 )
             )
-            db.ubicacionDao().insertar(
-                Ubicacion(
+            db.sucursalDao().insertar(
+                Sucursal(
                     nombre = "Sucursal Norte",
                     direccion = "Av. Recoleta 450, Recoleta",
                     activa = true,
                     fechaCreacion = Date()
                 )
             )
-            db.ubicacionDao().insertar(
-                Ubicacion(
+            db.sucursalDao().insertar(
+                Sucursal(
                     nombre = "Bodega Central",
                     direccion = "Av. Las Industrias 880, San Joaquín",
                     activa = true,
@@ -73,7 +73,7 @@ object DemoDataSeeder {
             db.movimientoDao().insertar(
                 Movimiento(
                     productoId = pArroz.id,
-                    ubicacionId = 1,
+                    sucursalId = 1,
                     tipo = TipoMovimiento.ENTRADA,
                     cantidad = 65,
                     motivo = "Recepción proveedor Abarrotes SA",
@@ -83,7 +83,7 @@ object DemoDataSeeder {
             db.movimientoDao().insertar(
                 Movimiento(
                     productoId = pCuaderno.id,
-                    ubicacionId = 1,
+                    sucursalId = 1,
                     tipo = TipoMovimiento.ENTRADA,
                     cantidad = 50,
                     motivo = "Ingreso de bodega central",
@@ -93,7 +93,7 @@ object DemoDataSeeder {
             db.movimientoDao().insertar(
                 Movimiento(
                     productoId = pCafe.id,
-                    ubicacionId = 1,
+                    sucursalId = 1,
                     tipo = TipoMovimiento.SALIDA,
                     cantidad = 6,
                     motivo = "Despacho a sucursal norte",
@@ -103,7 +103,7 @@ object DemoDataSeeder {
             db.movimientoDao().insertar(
                 Movimiento(
                     productoId = pAceite.id,
-                    ubicacionId = 1,
+                    sucursalId = 1,
                     tipo = TipoMovimiento.AJUSTE,
                     cantidad = 0,
                     motivo = "Ajuste por conteo físico: stock agotado",

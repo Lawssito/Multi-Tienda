@@ -18,7 +18,7 @@ data class Movimiento(
     @PrimaryKey(autoGenerate = true)
     val id: Int = 0,
     val productoId: Int,
-    val ubicacionId: Int,
+    val sucursalId: Int,
     val tipo: TipoMovimiento,
     val cantidad: Int,
     val motivo: String? = null,
