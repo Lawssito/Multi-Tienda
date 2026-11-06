@@ -1,15 +1,19 @@
 package com.bexai.multitienda.ui.navigation
 
+import android.widget.Toast
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavGraphBuilder
 import androidx.navigation.NavHostController
@@ -17,6 +21,8 @@ import androidx.navigation.NavType
 import androidx.navigation.navArgument
 import androidx.navigation.compose.composable
 import androidx.navigation.navigation
+import com.bexai.multitienda.data.AppDatabase
+import com.bexai.multitienda.data.ConteoRepository
 import com.bexai.multitienda.model.ResumenDia
 import com.bexai.multitienda.model.TipoMovimiento
 import com.bexai.multitienda.ui.view.AccionPantalla
@@ -29,6 +35,7 @@ import com.bexai.multitienda.ui.view.operador.ResumenConteoView
 import com.bexai.multitienda.viewmodel.ConteoViewModel
 import com.bexai.multitienda.viewmodel.EscanerViewModel
 import com.bexai.multitienda.viewmodel.InicioOperadorViewModel
+import kotlinx.coroutines.launch
 
 fun NavGraphBuilder.operadorNavGraph(navController: NavHostController) {
     navigation(
@@ -85,7 +92,8 @@ fun NavGraphBuilder.operadorNavGraph(navController: NavHostController) {
                 onVolver = { navController.popBackStack() },
                 onRecontar = { productoId ->
                     conteoViewModel.recontar(productoId)
-                    navController.popBackStack()   // vuelve al conteo a escanearlo de nuevo
+                    // Abre el escáner de conteo sin cerrar el Resumen: al terminar vuelves a él
+                    navController.navigate(Ruta.OperadorEscaner.conTipo(TipoMovimiento.AJUSTE, conteo = true))
                 },
                 onEnviar = {
                     conteoViewModel.enviar { diferencias ->
@@ -97,11 +105,30 @@ fun NavGraphBuilder.operadorNavGraph(navController: NavHostController) {
             )
         }
         composable(Ruta.OperadorCuenta.ruta) {
+            // TEMPORAL: probar la revisión del conteo sin la pantalla del encargado
+            val contexto = LocalContext.current
+            val scope = rememberCoroutineScope()
+            val conteoRepo = remember { ConteoRepository(AppDatabase.obtener(contexto)) }
+            fun revisarUltimoConteo(aprobar: Boolean) {
+                scope.launch {
+                    val conteo = conteoRepo.ultimoEnviado(1)
+                    val ok = conteo != null &&
+                        if (aprobar) conteoRepo.aprobar(conteo.id) else conteoRepo.rechazar(conteo.id)
+                    val mensaje = when {
+                        !ok -> "No hay conteos enviados"
+                        aprobar -> "Conteo aprobado"
+                        else -> "Conteo rechazado"
+                    }
+                    Toast.makeText(contexto, mensaje, Toast.LENGTH_SHORT).show()
+                }
+            }
             ConBarraOperador(navController) { padding ->
                 PantallaVacia(
                     titulo = "Cuenta",
                     descripcion = "Datos del usuario y cerrar sesión.",
                     acciones = listOf(
+                        AccionPantalla("Aprobar último conteo (prueba)") { revisarUltimoConteo(true) },
+                        AccionPantalla("Rechazar último conteo (prueba)") { revisarUltimoConteo(false) },
                         AccionPantalla("Cerrar sesión") {
                             navController.navigate(Ruta.Login.ruta) {
                                 popUpTo(navController.graph.id) { inclusive = true }
@@ -146,6 +173,10 @@ fun NavGraphBuilder.operadorNavGraph(navController: NavHostController) {
                 onCodigo = { codigo -> escanerViewModel.procesarCodigo(codigo, tipo, esConteo) },
                 onSinCodigo = { escanerViewModel.avisarSinCodigo() },
                 onNuevaBusqueda = { escanerViewModel.limpiarMensaje() },
+                onAbrirManual = { escanerViewModel.abrirManual() },
+                onCerrarManual = { escanerViewModel.cerrarManual() },
+                onBuscarManual = { codigo -> escanerViewModel.buscarCodigoManual(codigo, tipo, esConteo) },
+                onEditarManual = { escanerViewModel.limpiarErrorManual() },
                 onAbrirHoja = { escanerViewModel.abrirHojaCantidad() },
                 onCerrarHoja = { escanerViewModel.cerrarHoja() },
                 onDescartarHoja = { escanerViewModel.descartarHoja() },

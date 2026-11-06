@@ -105,6 +105,10 @@ fun EscanerView(
     onCodigo: (String) -> Unit,
     onSinCodigo: () -> Unit,
     onNuevaBusqueda: () -> Unit,
+    onAbrirManual: () -> Unit,
+    onCerrarManual: () -> Unit,
+    onBuscarManual: (String) -> Unit,
+    onEditarManual: () -> Unit,
     onAbrirHoja: () -> Unit,
     onCerrarHoja: () -> Unit,
     onDescartarHoja: () -> Unit,
@@ -210,7 +214,7 @@ fun EscanerView(
                 estado = estado,
                 buscando = buscando,
                 linterna = linterna,
-                onManual = { /* pendiente */ },
+                onManual = onAbrirManual,
                 onDisparo = {
                     onNuevaBusqueda()
                     pedirLectura.set(true)
@@ -220,6 +224,16 @@ fun EscanerView(
                 onCambiarCantidad = onAbrirHoja
             )
         }
+    }
+
+    // Hoja inferior: Código manual
+    if (estado.manualAbierto) {
+        HojaCodigoManualView(
+            error = estado.errorManual,
+            onCerrar = onCerrarManual,
+            onBuscar = onBuscarManual,
+            onEditar = onEditarManual
+        )
     }
 
     // Hoja inferior: Cambiar cantidad o Ajuste

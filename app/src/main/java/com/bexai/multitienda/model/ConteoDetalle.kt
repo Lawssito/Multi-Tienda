@@ -36,4 +36,9 @@ data class ConteoDetalle(
     val contado: Int? = null,
     val sistema: Int,
     val actualizado: Long = 0   // cuándo se contó por última vez (para ordenar la lista)
-)
+) {
+    companion object {
+        /** En [actualizado]: la línea está marcada para recontar. Conserva su valor hasta el próximo escaneo. */
+        const val RECONTAR = -1L
+    }
+}

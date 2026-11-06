@@ -50,7 +50,9 @@ data class EscanerUiState(
     val lecturas: Int = 0,
     val ultima: UltimaLectura? = null,
     val mensaje: String? = null,
-    val hoja: HojaCantidad? = null
+    val hoja: HojaCantidad? = null,
+    val manualAbierto: Boolean = false,   // hoja "Código manual"
+    val errorManual: String? = null
 )
 
 class EscanerViewModel(app: Application) : AndroidViewModel(app) {
@@ -63,6 +65,29 @@ class EscanerViewModel(app: Application) : AndroidViewModel(app) {
 
     init {
         viewModelScope.launch { sembrarProductosDemo() }
+    }
+
+    // ---------- Código manual: escribir el código en vez de escanearlo ----------
+
+    fun abrirManual() = _uiState.update { it.copy(manualAbierto = true, errorManual = null) }
+
+    fun cerrarManual() = _uiState.update { it.copy(manualAbierto = false, errorManual = null) }
+
+    fun limpiarErrorManual() = _uiState.update { it.copy(errorManual = null) }
+
+    /**
+     * Si el producto no existe, el error queda en el campo y la hoja sigue abierta.
+     * Si existe, se cierra la hoja y el código se procesa igual que uno escaneado.
+     */
+    fun buscarCodigoManual(codigo: String, tipo: TipoMovimiento, esConteo: Boolean) {
+        viewModelScope.launch {
+            if (db.productoDao().buscarPorCodigo(codigo) == null) {
+                _uiState.update { it.copy(errorManual = "No existe un producto con ese código") }
+                return@launch
+            }
+            _uiState.update { it.copy(manualAbierto = false, errorManual = null) }
+            procesarCodigo(codigo, tipo, esConteo)
+        }
     }
 
     fun procesarCodigo(codigo: String, tipo: TipoMovimiento, esConteo: Boolean) {
@@ -232,7 +257,9 @@ class EscanerViewModel(app: Application) : AndroidViewModel(app) {
             // El stock del sistema se congeló al iniciar el conteo. Si el producto es nuevo
             // (se creó después de iniciar), se toma su stock actual.
             val previo = conteoDao.buscarDetalle(conteo.id, producto.id)
-            val contado = (previo?.contado ?: 0) + 1
+            // Si la línea está marcada para recontar, el primer escaneo reemplaza el valor anterior
+            val recontando = previo?.actualizado == ConteoDetalle.RECONTAR
+            val contado = (if (recontando) 0 else previo?.contado ?: 0) + 1
             val sistema = previo?.sistema ?: producto.stock
             // Una "tanda" son las lecturas seguidas del mismo producto. Descartar deshace solo la tanda.
             val anterior = _uiState.value.ultima
@@ -304,7 +331,7 @@ class EscanerViewModel(app: Application) : AndroidViewModel(app) {
         }
         _uiState.update {
             it.copy(
-                lecturas = (it.lecturas - (hoja.cantidadInicial - hoja.baseConteo)).coerceAtLeast(0),
+                lecturas = (it.lecturas - (hoja.cantidadInicial - hoja.baseConteo).coerceAtLeast(0)).coerceAtLeast(0),
                 ultima = null,
                 hoja = null
             )

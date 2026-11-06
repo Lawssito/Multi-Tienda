@@ -89,11 +89,14 @@ class ConteoViewModel(app: Application) : AndroidViewModel(app) {
         initialValue = ConteoUiState()
     )
 
-    /** Recontar: la línea vuelve a "sin contar" (conserva su stock congelado). */
+    /**
+     * Recontar: la línea se marca para recontar. Conserva lo contado hasta que se vuelva a
+     * escanear; el primer escaneo nuevo reemplaza el valor y empieza otra vez desde 1.
+     */
     fun recontar(productoId: Int) {
         viewModelScope.launch {
             val id = conteoId.value ?: return@launch
-            dao.descontar(id, productoId)
+            dao.marcarRecontar(id, productoId)
         }
     }
 

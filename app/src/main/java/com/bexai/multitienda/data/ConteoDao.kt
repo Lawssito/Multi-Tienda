@@ -39,6 +39,14 @@ interface ConteoDao {
     """)
     suspend fun descontar(conteoId: Int, productoId: Int)
 
+    // Recontar: la línea conserva su valor, pero el próximo escaneo vuelve a empezar desde 1
+    // (-1 = ConteoDetalle.RECONTAR)
+    @Query("""
+        UPDATE ConteoDetalle SET actualizado = -1
+        WHERE conteoId = :conteoId AND productoId = :productoId
+    """)
+    suspend fun marcarRecontar(conteoId: Int, productoId: Int)
+
     @Query("""
         SELECT d.productoId AS productoId, p.nombre AS nombre, p.codigoBarras AS codigoBarras,
                COALESCE(d.contado, 0) AS contado, d.sistema AS sistema
@@ -52,6 +60,26 @@ interface ConteoDao {
     // Total de productos del conteo (los congelados al iniciar)
     @Query("SELECT COUNT(*) FROM ConteoDetalle WHERE conteoId = :conteoId")
     fun totalLineas(conteoId: Int): Flow<Int>
+
+    @Query("SELECT * FROM Conteo WHERE id = :id")
+    suspend fun buscar(id: Int): Conteo?
+
+    // Conteos esperando revisión del encargado, el más reciente primero
+    @Query("SELECT * FROM Conteo WHERE ubicacionId = :ubicacionId AND estado = 'ENVIADO' ORDER BY fechaEnvio DESC")
+    fun enviados(ubicacionId: Int): Flow<List<Conteo>>
+
+    @Query("SELECT * FROM Conteo WHERE ubicacionId = :ubicacionId AND estado = 'ENVIADO' ORDER BY fechaEnvio DESC LIMIT 1")
+    suspend fun ultimoEnviado(ubicacionId: Int): Conteo?
+
+    // Igual que lineas(), pero una sola lectura (para aprobar dentro de una transacción)
+    @Query("""
+        SELECT d.productoId AS productoId, p.nombre AS nombre, p.codigoBarras AS codigoBarras,
+               COALESCE(d.contado, 0) AS contado, d.sistema AS sistema
+        FROM ConteoDetalle d
+        INNER JOIN producto p ON p.id = d.productoId
+        WHERE d.conteoId = :conteoId AND d.contado IS NOT NULL
+    """)
+    suspend fun lineasContadas(conteoId: Int): List<LineaConteo>
 
     @Query("UPDATE Conteo SET estado = :estado, fechaEnvio = :fechaEnvio WHERE id = :id")
     suspend fun cambiarEstado(id: Int, estado: EstadoConteo, fechaEnvio: Long?)
