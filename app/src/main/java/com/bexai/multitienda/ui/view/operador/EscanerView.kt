@@ -101,10 +101,14 @@ fun EscanerView(
     esConteo: Boolean,
     sucursal: String,
     estado: EscanerUiState,
-    onTipoChange: (TipoMovimiento) -> Unit,
+    onTipoChange: (TipoMovimiento, Boolean) -> Unit,
     onCodigo: (String) -> Unit,
     onSinCodigo: () -> Unit,
     onNuevaBusqueda: () -> Unit,
+    onAbrirManual: () -> Unit,
+    onCerrarManual: () -> Unit,
+    onBuscarManual: (String) -> Unit,
+    onEditarManual: () -> Unit,
     onAbrirHoja: () -> Unit,
     onCerrarHoja: () -> Unit,
     onDescartarHoja: () -> Unit,
@@ -210,7 +214,7 @@ fun EscanerView(
                 estado = estado,
                 buscando = buscando,
                 linterna = linterna,
-                onManual = { /* pendiente */ },
+                onManual = onAbrirManual,
                 onDisparo = {
                     onNuevaBusqueda()
                     pedirLectura.set(true)
@@ -220,6 +224,16 @@ fun EscanerView(
                 onCambiarCantidad = onAbrirHoja
             )
         }
+    }
+
+    // Hoja inferior: Código manual
+    if (estado.manualAbierto) {
+        HojaCodigoManualView(
+            error = estado.errorManual,
+            onCerrar = onCerrarManual,
+            onBuscar = onBuscarManual,
+            onEditar = onEditarManual
+        )
     }
 
     // Hoja inferior: Cambiar cantidad o Ajuste
@@ -301,7 +315,7 @@ private fun BarraSuperiorEscaner(
     sucursal: String,
     tipo: TipoMovimiento,
     esConteo: Boolean,
-    onTipoChange: (TipoMovimiento) -> Unit,
+    onTipoChange: (TipoMovimiento, Boolean) -> Unit,
     onCerrar: () -> Unit,
     onListo: () -> Unit,
     modifier: Modifier = Modifier
@@ -335,7 +349,7 @@ private fun BarraSuperiorEscaner(
 }
 
 @Composable
-private fun ChipTipo(tipo: TipoMovimiento, esConteo: Boolean, onTipoChange: (TipoMovimiento) -> Unit) {
+private fun ChipTipo(tipo: TipoMovimiento, esConteo: Boolean, onTipoChange: (TipoMovimiento, Boolean) -> Unit) {
     var abierto by remember { mutableStateOf(false) }
     val (texto, color, fondo) = when {
         esConteo -> Triple("Conteo", TextoPrincipal, SuperficieVariante)
@@ -348,7 +362,7 @@ private fun ChipTipo(tipo: TipoMovimiento, esConteo: Boolean, onTipoChange: (Tip
             modifier = Modifier
                 .clip(CircleShape)
                 .background(fondo)
-                .clickable(enabled = !esConteo) { abierto = true }
+                .clickable { abierto = true }
                 .padding(horizontal = 14.dp, vertical = 6.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
@@ -357,18 +371,21 @@ private fun ChipTipo(tipo: TipoMovimiento, esConteo: Boolean, onTipoChange: (Tip
             Text(texto, color = color, fontWeight = FontWeight.Bold)
             Icon(Icons.Default.KeyboardArrowDown, null, tint = color, modifier = Modifier.size(20.dp))
         }
-        // En conteo el tipo es fijo (Ajuste); en los demás se puede cambiar
+        // Conteo se guarda como Ajuste (tipo AJUSTE) pero con el modo conteo activado
         DropdownMenu(expanded = abierto, onDismissRequest = { abierto = false }) {
             listOf(
-                TipoMovimiento.ENTRADA to "Entrada",
-                TipoMovimiento.SALIDA to "Salida",
-                TipoMovimiento.AJUSTE to "Ajuste"
-            ).forEach { (opcion, nombre) ->
+                Triple(TipoMovimiento.ENTRADA, false, "Entrada"),
+                Triple(TipoMovimiento.SALIDA, false, "Salida"),
+                Triple(TipoMovimiento.AJUSTE, false, "Ajuste"),
+                Triple(TipoMovimiento.AJUSTE, true, "Conteo")
+            ).forEach { (opcionTipo, opcionConteo, nombre) ->
                 DropdownMenuItem(
                     text = { Text(nombre) },
                     onClick = {
                         abierto = false
-                        if (opcion != tipo) onTipoChange(opcion)
+                        if (opcionTipo != tipo || opcionConteo != esConteo) {
+                            onTipoChange(opcionTipo, opcionConteo)
+                        }
                     }
                 )
             }
@@ -453,8 +470,8 @@ private fun PanelEscaner(
 
 @Composable
 private fun TarjetaLectura(lectura: UltimaLectura, onClick: () -> Unit) {
-    val esAjuste = lectura.tipo == TipoMovimiento.AJUSTE
-    val detalle = when (lectura.tipo) {
+    val esAjuste = lectura.tipo == TipoMovimiento.AJUSTE && !lectura.esConteo
+    val detalle = if (lectura.esConteo) "Conteo · sistema ${lectura.stockAntes}" else when (lectura.tipo) {
         TipoMovimiento.ENTRADA -> "Entrada +${lectura.cantidad} · stock ${lectura.stockAntes} → ${lectura.stockDespues}"
         TipoMovimiento.SALIDA -> "Salida −${lectura.cantidad} · stock ${lectura.stockAntes} → ${lectura.stockDespues}"
         TipoMovimiento.AJUSTE -> "Ajuste · stock ${lectura.stockAntes} → ${lectura.stockDespues}"

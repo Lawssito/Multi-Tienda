@@ -5,6 +5,7 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.room.withTransaction
 import com.bexai.multitienda.data.AppDatabase
+import com.bexai.multitienda.model.ConteoDetalle
 import com.bexai.multitienda.model.Movimiento
 import com.bexai.multitienda.model.Producto
 import com.bexai.multitienda.model.TipoMovimiento
@@ -25,8 +26,10 @@ data class UltimaLectura(
     val cantidad: Int,
     val stockAntes: Int,
     val stockDespues: Int,
-    val movimientoId: Int,
-    val motivo: String? = null
+    val movimientoId: Int,          // en modo Conteo no se usa (0)
+    val motivo: String? = null,
+    val esConteo: Boolean = false,  // en conteo, cantidad = contado y stockAntes = sistema
+    val baseConteo: Int = 0         // contado que había antes de esta tanda de lecturas
 )
 
 /** Datos de la hoja inferior (Cambiar cantidad o Ajuste). */
@@ -38,14 +41,18 @@ data class HojaCantidad(
     val stockBase: Int,            // stock antes de este movimiento
     val cantidadInicial: Int,
     val motivoInicial: String = "",
-    val movimientoId: Int? = null  // si ya existe, la hoja lo edita en vez de crear otro
+    val movimientoId: Int? = null, // si ya existe, la hoja lo edita en vez de crear otro
+    val esConteo: Boolean = false, // edita lo contado de un producto en el conteo en curso
+    val baseConteo: Int = 0        // a esto vuelve lo contado si se descarta
 )
 
 data class EscanerUiState(
     val lecturas: Int = 0,
     val ultima: UltimaLectura? = null,
     val mensaje: String? = null,
-    val hoja: HojaCantidad? = null
+    val hoja: HojaCantidad? = null,
+    val manualAbierto: Boolean = false,   // hoja "Código manual"
+    val errorManual: String? = null
 )
 
 class EscanerViewModel(app: Application) : AndroidViewModel(app) {
@@ -60,10 +67,33 @@ class EscanerViewModel(app: Application) : AndroidViewModel(app) {
         viewModelScope.launch { sembrarProductosDemo() }
     }
 
+    // ---------- Código manual: escribir el código en vez de escanearlo ----------
+
+    fun abrirManual() = _uiState.update { it.copy(manualAbierto = true, errorManual = null) }
+
+    fun cerrarManual() = _uiState.update { it.copy(manualAbierto = false, errorManual = null) }
+
+    fun limpiarErrorManual() = _uiState.update { it.copy(errorManual = null) }
+
+    /**
+     * Si el producto no existe, el error queda en el campo y la hoja sigue abierta.
+     * Si existe, se cierra la hoja y el código se procesa igual que uno escaneado.
+     */
+    fun buscarCodigoManual(codigo: String, tipo: TipoMovimiento, esConteo: Boolean) {
+        viewModelScope.launch {
+            if (db.productoDao().buscarPorCodigo(codigo) == null) {
+                _uiState.update { it.copy(errorManual = "No existe un producto con ese código") }
+                return@launch
+            }
+            _uiState.update { it.copy(manualAbierto = false, errorManual = null) }
+            procesarCodigo(codigo, tipo, esConteo)
+        }
+    }
+
     fun procesarCodigo(codigo: String, tipo: TipoMovimiento, esConteo: Boolean) {
         if (_uiState.value.hoja != null) return   // con la hoja abierta no se leen códigos
         if (esConteo) {
-            avisar("El conteo se completa en su propia pantalla (pendiente)")
+            contarProducto(codigo)
             return
         }
 
@@ -146,14 +176,16 @@ class EscanerViewModel(app: Application) : AndroidViewModel(app) {
         _uiState.update {
             it.copy(
                 hoja = HojaCantidad(
-                    esAjuste = ultima.tipo == TipoMovimiento.AJUSTE,
+                    esAjuste = ultima.tipo == TipoMovimiento.AJUSTE && !ultima.esConteo,
                     productoId = ultima.productoId,
                     nombre = ultima.nombre,
                     tipo = ultima.tipo,
                     stockBase = ultima.stockAntes,
                     cantidadInicial = ultima.cantidad,
                     motivoInicial = ultima.motivo ?: "",
-                    movimientoId = ultima.movimientoId
+                    movimientoId = ultima.movimientoId,
+                    esConteo = ultima.esConteo,
+                    baseConteo = ultima.baseConteo
                 )
             )
         }
@@ -164,8 +196,11 @@ class EscanerViewModel(app: Application) : AndroidViewModel(app) {
     fun guardarHoja(cantidad: Int, motivo: String) {
         val hoja = _uiState.value.hoja ?: return
         viewModelScope.launch {
-            if (hoja.esAjuste) guardarAjuste(hoja, cantidad, motivo.trim())
-            else guardarCambioCantidad(hoja, cantidad)
+            when {
+                hoja.esConteo -> guardarConteo(hoja, cantidad)
+                hoja.esAjuste -> guardarAjuste(hoja, cantidad, motivo.trim())
+                else -> guardarCambioCantidad(hoja, cantidad)
+            }
         }
     }
 
@@ -176,6 +211,10 @@ class EscanerViewModel(app: Application) : AndroidViewModel(app) {
     fun descartarHoja() {
         val hoja = _uiState.value.hoja ?: return
         viewModelScope.launch {
+            if (hoja.esConteo) {
+                descartarLineaConteo(hoja)
+                return@launch
+            }
             val movimientoId = hoja.movimientoId
             if (movimientoId != null) {
                 db.withTransaction {
@@ -196,6 +235,106 @@ class EscanerViewModel(app: Application) : AndroidViewModel(app) {
                     hoja = null
                 )
             }
+        }
+    }
+
+    // ---------- Conteo: suma a la lista del conteo en curso, NO toca el stock ----------
+
+    private fun contarProducto(codigo: String) {
+        viewModelScope.launch {
+            val producto = db.productoDao().buscarPorCodigo(codigo)
+            if (producto == null) {
+                avisar("Producto no encontrado: $codigo")
+                return@launch
+            }
+            val conteoDao = db.conteoDao()
+            val conteo = conteoDao.enCurso(ubicacionId)
+            if (conteo == null) {
+                avisar("No hay un conteo en curso. Vuelve e inicia el conteo.")
+                return@launch
+            }
+
+            // El stock del sistema se congeló al iniciar el conteo. Si el producto es nuevo
+            // (se creó después de iniciar), se toma su stock actual.
+            val previo = conteoDao.buscarDetalle(conteo.id, producto.id)
+            // Si la línea está marcada para recontar, el primer escaneo reemplaza el valor anterior
+            val recontando = previo?.actualizado == ConteoDetalle.RECONTAR
+            val contado = (if (recontando) 0 else previo?.contado ?: 0) + 1
+            val sistema = previo?.sistema ?: producto.stock
+            // Una "tanda" son las lecturas seguidas del mismo producto. Descartar deshace solo la tanda.
+            val anterior = _uiState.value.ultima
+            val base = if (anterior != null && anterior.esConteo && anterior.productoId == producto.id) {
+                anterior.baseConteo
+            } else {
+                previo?.contado ?: 0
+            }
+            conteoDao.guardarDetalle(
+                ConteoDetalle(
+                    id = previo?.id ?: 0,
+                    conteoId = conteo.id,
+                    productoId = producto.id,
+                    contado = contado,
+                    sistema = sistema,
+                    actualizado = System.currentTimeMillis()
+                )
+            )
+
+            _uiState.update {
+                it.copy(
+                    lecturas = it.lecturas + 1,
+                    ultima = UltimaLectura(
+                        productoId = producto.id,
+                        nombre = producto.nombre,
+                        tipo = TipoMovimiento.AJUSTE,
+                        cantidad = contado,
+                        stockAntes = sistema,
+                        stockDespues = contado,
+                        movimientoId = 0,
+                        esConteo = true,
+                        baseConteo = base
+                    ),
+                    mensaje = null
+                )
+            }
+        }
+    }
+
+    private suspend fun guardarConteo(hoja: HojaCantidad, contado: Int) {
+        if (contado < 0) return
+        val conteoDao = db.conteoDao()
+        val conteo = conteoDao.enCurso(ubicacionId) ?: return
+        val detalle = conteoDao.buscarDetalle(conteo.id, hoja.productoId) ?: return
+        conteoDao.guardarDetalle(detalle.copy(contado = contado, actualizado = System.currentTimeMillis()))
+        _uiState.update {
+            it.copy(
+                ultima = it.ultima?.copy(cantidad = contado, stockDespues = contado),
+                hoja = null
+            )
+        }
+    }
+
+    private suspend fun descartarLineaConteo(hoja: HojaCantidad) {
+        val conteoDao = db.conteoDao()
+        val conteo = conteoDao.enCurso(ubicacionId)
+        if (conteo != null) {
+            if (hoja.baseConteo > 0) {
+                // Ya estaba contado antes de esta tanda: vuelve a ese valor
+                val detalle = conteoDao.buscarDetalle(conteo.id, hoja.productoId)
+                if (detalle != null) {
+                    conteoDao.guardarDetalle(
+                        detalle.copy(contado = hoja.baseConteo, actualizado = System.currentTimeMillis())
+                    )
+                }
+            } else {
+                conteoDao.descontar(conteo.id, hoja.productoId)
+            }
+        }
+        _uiState.update {
+            it.copy(
+                lecturas = (it.lecturas - (hoja.cantidadInicial - hoja.baseConteo).coerceAtLeast(0)).coerceAtLeast(0),
+                ultima = null,
+                hoja = null
+            )
         }
     }
 
