@@ -5,7 +5,6 @@ import androidx.compose.ui.graphics.Color
 // Marca
 val Azul = Color(0xFF2563EB)
 val AzulOscuro = Color(0xFF1D4ED8)
-val AzulClaro = Color(0xFF3B82F6)
 val AzulSuave = Color(0xFFDBEAFE)
 
 // Texto
@@ -30,3 +29,11 @@ val ExitoSuave = Color(0xFFB9FDCB)
 val BarraFondo = Color(0xFF0F172A)
 val Celeste = Color(0xFF93E2FF)
 val GrisBarra = Color(0xFFB8C4BE)
+
+// Pantallas y estados (antes repetidos como colores privados en cada pantalla)
+val FondoPantalla = Color(0xFFF4F6FA)
+val GrisFondo = Color(0xFFEEF1F6)
+val Rojo = Color(0xFFDC2626)
+val NaranjaTexto = Color(0xFFB45309)
+val NaranjaFondo = Color(0xFFFFEBD2)
+val VerdeFondo = Color(0xFFE7F7EF)

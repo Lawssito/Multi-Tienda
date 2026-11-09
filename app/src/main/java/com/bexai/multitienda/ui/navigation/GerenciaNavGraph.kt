@@ -1,50 +1,70 @@
 package com.bexai.multitienda.ui.navigation
 
+import androidx.compose.foundation.layout.padding
+import androidx.compose.ui.Modifier
 import androidx.navigation.NavGraphBuilder
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.composable
-import androidx.navigation.compose.navigation
-import com.bexai.multitienda.ui.view.AccionPantalla
-import com.bexai.multitienda.ui.view.PantallaVacia
+import androidx.navigation.navigation
+import com.bexai.multitienda.ui.view.comun.CuentaView
+import com.bexai.multitienda.ui.view.gerencia.GerenciaAlertasView
+import com.bexai.multitienda.ui.view.gerencia.GerenciaHistorialView
+import com.bexai.multitienda.ui.view.gerencia.GerenciaPanelView
+import com.bexai.multitienda.ui.view.gerencia.GerenciaStockView
+import com.bexai.multitienda.ui.view.gerencia.GestionTiendasView
 
+/**
+ * Grafo de navegación de Gerencia: Panel, Stock, Alertas, Historial, Cuenta y Tiendas
+ * habilitadas. Todas las pantallas van dentro de ConBarraGerencia.
+ */
 fun NavGraphBuilder.gerenciaNavGraph(navController: NavHostController) {
     navigation(
         startDestination = Ruta.GerenciaInicio.ruta,
         route = Ruta.GRAFO_GERENCIA
     ) {
+        // ---------- Panel ----------
         composable(Ruta.GerenciaInicio.ruta) {
-            PantallaVacia(
-                titulo = "Inicio gestión",
-                descripcion = "Grafo de gestión. Pantalla vacía de prueba.",
-                acciones = listOf(
-                    AccionPantalla(
-                        texto = "Ir a reportes",
-                        alHacerClic = {
-                            navController.navigate(Ruta.GerenciaInicio.ruta)
-                        }
-                    ),
-                    AccionPantalla(
-                        texto = "Volver al login",
-                        alHacerClic = {
-                            navController.navigate(Ruta.Login.ruta) {
-                                popUpTo(navController.graph.id) { inclusive = true }
-                            }
-                        }
-                    )
-                )
-            )
+            ConBarraGerencia(navController) { padding ->
+                GerenciaPanelView(navController, Modifier.padding(padding))
+            }
         }
-        composable(Ruta.GerenciaReportes.ruta) {
-            PantallaVacia(
-                titulo = "Reportes",
-                descripcion = "Pantalla vacía de reportes para probar la navegación.",
-                acciones = listOf(
-                    AccionPantalla(
-                        texto = "Volver",
-                        alHacerClic = { navController.popBackStack() }
-                    )
+        // ---------- Stock global ----------
+        composable(Ruta.GerenciaStock.ruta) {
+            ConBarraGerencia(navController) { padding ->
+                GerenciaStockView(Modifier.padding(padding))
+            }
+        }
+        // ---------- Alertas ----------
+        composable(Ruta.GerenciaAlertas.ruta) {
+            ConBarraGerencia(navController) { padding ->
+                GerenciaAlertasView(navController, Modifier.padding(padding))
+            }
+        }
+        // ---------- Historial ----------
+        composable(Ruta.GerenciaHistorial.ruta) {
+            ConBarraGerencia(navController) { padding ->
+                GerenciaHistorialView(Modifier.padding(padding))
+            }
+        }
+        // ---------- Cuenta ----------
+        composable(Ruta.GerenciaCuenta.ruta) {
+            ConBarraGerencia(navController) { padding ->
+                CuentaView(
+                    iniciales = "GE",
+                    rol = "Gerencia",
+                    sucursal = null,
+                    onCerrarSesion = {
+                        navController.navigate(Ruta.Login.ruta) { popUpTo(0) { inclusive = true } }
+                    },
+                    modifier = Modifier.padding(padding)
                 )
-            )
+            }
+        }
+        // ---------- Tiendas habilitadas ----------
+        composable(Ruta.GerenciaGestionTiendas.ruta) {
+            ConBarraGerencia(navController) {
+                GestionTiendasView(navController)
+            }
         }
     }
 }

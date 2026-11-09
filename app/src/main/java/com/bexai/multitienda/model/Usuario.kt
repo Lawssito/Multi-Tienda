@@ -3,6 +3,7 @@ package com.bexai.multitienda.model
 import androidx.room.Entity
 import androidx.room.PrimaryKey
 
+/** Cuenta de usuario con su rol. */
 @Entity
 data class Usuario(
     @PrimaryKey(autoGenerate = true)

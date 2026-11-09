@@ -10,8 +10,11 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.ui.Modifier
 import com.bexai.multitienda.ui.navigation.AppNavHost
 import com.bexai.multitienda.ui.theme.MultiTiendaTheme
-import com.bexai.multitienda.ui.view.LoginView
 
+/**
+ * MainActivity: única Activity de la app. Aplica el tema y carga [AppNavHost], que decide
+ * qué pantalla mostrar según el rol con el que se inicia sesión.
+ */
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
