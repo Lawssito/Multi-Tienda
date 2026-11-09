@@ -35,23 +35,21 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.bexai.multitienda.ui.components.PastillaSucursal
 import com.bexai.multitienda.ui.theme.Azul
-import com.bexai.multitienda.viewmodel.DiferenciaStock
-import com.bexai.multitienda.viewmodel.EncargadoViewModel
+import com.bexai.multitienda.ui.theme.AzulOscuro
+import com.bexai.multitienda.ui.theme.AzulSuave
+import com.bexai.multitienda.ui.theme.FondoPantalla
+import com.bexai.multitienda.ui.theme.NaranjaFondo
+import com.bexai.multitienda.ui.theme.NaranjaTexto
+import com.bexai.multitienda.ui.theme.Peligro
+import com.bexai.multitienda.ui.theme.PeligroSuave
+import com.bexai.multitienda.ui.theme.TextoPrincipal
+import com.bexai.multitienda.ui.theme.TextoSecundario
+import com.bexai.multitienda.viewmodel.encargado.DiferenciaStock
+import com.bexai.multitienda.viewmodel.encargado.EncargadoViewModel
 import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
-
-// Colores del mockup v6 (Diferencias.dc.html)
-private val FondoPantalla = Color(0xFFF4F6FA)
-private val Texto = Color(0xFF0F172A)
-private val TextoSuave = Color(0xFF5B6474)
-private val NaranjaTexto = Color(0xFFB45309)
-private val NaranjaFondo = Color(0xFFFFEBD2)
-private val AzulTexto = Color(0xFF1D4ED8)
-private val AzulFondo = Color(0xFFDBEAFE)
-private val RojoTexto = Color(0xFFB91C1C)
-private val RojoFondo = Color(0xFFFEE2E2)
 
 /**
  * Diferencias de la sucursal (mockup "Diferencias"): solo análisis del último conteo;
@@ -98,15 +96,15 @@ fun DiferenciasStockView(
                     PastillaSucursal(nombreSucursal, onClick = onCambiarSucursal)
                     Text(
                         if (hora != null) "Último conteo $hora" else "Sin conteos enviados",
-                        fontSize = 15.sp, color = TextoSuave
+                        fontSize = 15.sp, color = TextoSecundario
                     )
-                    Text("Diferencias", fontSize = 32.sp, fontWeight = FontWeight.ExtraBold, color = Texto)
+                    Text("Diferencias", fontSize = 32.sp, fontWeight = FontWeight.ExtraBold, color = TextoPrincipal)
                 }
             }
             item {
                 Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                     Resumen("${diferencias.size}", "Con descalce", NaranjaFondo, NaranjaTexto, Modifier.weight(1f))
-                    Resumen("$bajoMinimo", "Bajo mínimo", RojoFondo, RojoTexto, Modifier.weight(1f))
+                    Resumen("$bajoMinimo", "Bajo mínimo", PeligroSuave, Peligro, Modifier.weight(1f))
                 }
             }
             item {
@@ -117,9 +115,9 @@ fun DiferenciasStockView(
                             text = nombre,
                             fontSize = 15.sp,
                             fontWeight = FontWeight.SemiBold,
-                            color = if (elegido) Color.White else Texto,
+                            color = if (elegido) Color.White else TextoPrincipal,
                             modifier = Modifier
-                                .background(if (elegido) Texto else Color.White, RoundedCornerShape(24.dp))
+                                .background(if (elegido) TextoPrincipal else Color.White, RoundedCornerShape(24.dp))
                                 .border(BorderStroke(1.dp, Color(0xFFE2E8F0)), RoundedCornerShape(24.dp))
                                 .clickable { filtro = nombre }
                                 .padding(horizontal = 18.dp, vertical = 12.dp)
@@ -131,7 +129,7 @@ fun DiferenciasStockView(
                 item {
                     Text(
                         if (diferencias.isEmpty()) "El último conteo no tiene diferencias." else "Sin diferencias en este filtro.",
-                        fontSize = 15.sp, color = TextoSuave
+                        fontSize = 15.sp, color = TextoSecundario
                     )
                 }
             }
@@ -179,20 +177,20 @@ private fun TarjetaDiferencia(d: DiferenciaStock, onReponer: () -> Unit) {
         verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-            Text(d.nombre, fontSize = 18.sp, fontWeight = FontWeight.Bold, color = Texto, modifier = Modifier.weight(1f))
+            Text(d.nombre, fontSize = 18.sp, fontWeight = FontWeight.Bold, color = TextoPrincipal, modifier = Modifier.weight(1f))
             Text(
                 text = if (falta) "▼ −${-d.diferencia} uds" else "▲ +${d.diferencia} uds",
                 fontSize = 14.sp, fontWeight = FontWeight.Bold,
-                color = if (falta) NaranjaTexto else AzulTexto,
+                color = if (falta) NaranjaTexto else AzulOscuro,
                 modifier = Modifier
-                    .background(if (falta) NaranjaFondo else AzulFondo, RoundedCornerShape(10.dp))
+                    .background(if (falta) NaranjaFondo else AzulSuave, RoundedCornerShape(10.dp))
                     .padding(horizontal = 10.dp, vertical = 6.dp)
             )
         }
         Row(modifier = Modifier.fillMaxWidth()) {
-            Dato("Registrado", "${d.registrado}", Texto, Modifier.weight(1f))
-            Dato("Contado", "${d.contado}", Texto, Modifier.weight(1f))
-            Dato("Mínimo", "${d.minimo}", if (d.contado < d.minimo) RojoTexto else Texto, Modifier.weight(1f))
+            Dato("Registrado", "${d.registrado}", TextoPrincipal, Modifier.weight(1f))
+            Dato("Contado", "${d.contado}", TextoPrincipal, Modifier.weight(1f))
+            Dato("Mínimo", "${d.minimo}", if (d.contado < d.minimo) Peligro else TextoPrincipal, Modifier.weight(1f))
         }
         if (falta) {
             Box(
@@ -206,7 +204,7 @@ private fun TarjetaDiferencia(d: DiferenciaStock, onReponer: () -> Unit) {
 @Composable
 private fun Dato(etiqueta: String, valor: String, color: Color, modifier: Modifier) {
     Column(modifier = modifier) {
-        Text(etiqueta, fontSize = 14.sp, color = TextoSuave)
+        Text(etiqueta, fontSize = 14.sp, color = TextoSecundario)
         Text(valor, fontSize = 20.sp, fontWeight = FontWeight.ExtraBold, color = color)
     }
 }

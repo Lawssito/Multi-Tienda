@@ -35,10 +35,15 @@ import androidx.navigation.NavHostController
 import com.bexai.multitienda.model.TipoMovimiento
 import com.bexai.multitienda.ui.navigation.Ruta
 import com.bexai.multitienda.ui.theme.Azul
-import com.bexai.multitienda.viewmodel.GerenciaViewModel
+import com.bexai.multitienda.ui.theme.FondoPantalla
+import com.bexai.multitienda.ui.theme.Peligro
+import com.bexai.multitienda.ui.theme.PeligroSuave
+import com.bexai.multitienda.ui.theme.Rojo
+import com.bexai.multitienda.ui.theme.TextoPrincipal
+import com.bexai.multitienda.ui.theme.TextoSecundario
+import com.bexai.multitienda.viewmodel.gerencia.GerenciaViewModel
 import java.util.Calendar
 
-private val AzulPanel = Color(0xFF2563EB)
 
 /** Inicio de hoy, hace 7 días o hace 30 días, en milisegundos. */
 internal fun desdeDias(dias: Int): Long =
@@ -62,7 +67,6 @@ fun GerenciaPanelView(
     val alertas by viewModel.alertas.collectAsState()
     val historial by viewModel.historialMovimientos.collectAsState()
     val ubicaciones by viewModel.stockPorUbicacion.collectAsState()
-    val stocks by viewModel.stockSucursal.collectAsState()
     val incidencias by viewModel.incidenciasCajas.collectAsState()
     val contexto = LocalContext.current
 
@@ -82,7 +86,7 @@ fun GerenciaPanelView(
     Column(
         modifier = modifier
             .fillMaxSize()
-            .background(GFondo)
+            .background(FondoPantalla)
             .statusBarsPadding()
             .verticalScroll(rememberScrollState())
             .padding(horizontal = 20.dp, vertical = 16.dp),
@@ -94,12 +98,12 @@ fun GerenciaPanelView(
             verticalAlignment = Alignment.CenterVertically
         ) {
             Column {
-                Text("Gerencia", fontSize = 15.sp, color = GTextoSuave)
-                Text("Panel general", fontSize = 32.sp, fontWeight = FontWeight.ExtraBold, color = GTexto)
+                Text("Gerencia", fontSize = 15.sp, color = TextoSecundario)
+                Text("Panel general", fontSize = 32.sp, fontWeight = FontWeight.ExtraBold, color = TextoPrincipal)
             }
             Box {
                 Text(
-                    "$periodo ▾", fontSize = 16.sp, fontWeight = FontWeight.Bold, color = GTexto,
+                    "$periodo ▾", fontSize = 16.sp, fontWeight = FontWeight.Bold, color = TextoPrincipal,
                     modifier = Modifier
                         .background(Color.White, RoundedCornerShape(24.dp))
                         .clickable { menu = true }
@@ -114,7 +118,7 @@ fun GerenciaPanelView(
         }
 
         Column(
-            modifier = Modifier.fillMaxWidth().background(AzulPanel, RoundedCornerShape(28.dp)).padding(24.dp),
+            modifier = Modifier.fillMaxWidth().background(Azul, RoundedCornerShape(28.dp)).padding(24.dp),
             verticalArrangement = Arrangement.spacedBy(4.dp)
         ) {
             Text("Stock total en la red", fontSize = 16.sp, color = Color.White.copy(alpha = 0.85f))
@@ -124,22 +128,22 @@ fun GerenciaPanelView(
 
         Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
             Column(
-                modifier = Modifier.weight(1f).background(GRojoFondo, RoundedCornerShape(24.dp)).padding(18.dp),
+                modifier = Modifier.weight(1f).background(PeligroSuave, RoundedCornerShape(24.dp)).padding(18.dp),
                 verticalArrangement = Arrangement.spacedBy(2.dp)
             ) {
-                Text("Alertas activas", fontSize = 15.sp, fontWeight = FontWeight.SemiBold, color = GRojoTexto)
-                Text("${activas.size}", fontSize = 36.sp, fontWeight = FontWeight.ExtraBold, color = GRojo)
-                Text("$criticas críticas", fontSize = 15.sp, color = GRojoTexto)
+                Text("Alertas activas", fontSize = 15.sp, fontWeight = FontWeight.SemiBold, color = Peligro)
+                Text("${activas.size}", fontSize = 36.sp, fontWeight = FontWeight.ExtraBold, color = Rojo)
+                Text("$criticas críticas", fontSize = 15.sp, color = Peligro)
             }
             Column(
                 modifier = Modifier.weight(1f).background(Color.White, RoundedCornerShape(24.dp)).padding(18.dp),
                 verticalArrangement = Arrangement.spacedBy(2.dp)
             ) {
-                Text("Movimientos ${if (periodo == "Hoy") "hoy" else periodo}", fontSize = 15.sp, fontWeight = FontWeight.SemiBold, color = GTextoSuave)
-                Text("${movimientos.size}", fontSize = 36.sp, fontWeight = FontWeight.ExtraBold, color = GTexto)
+                Text("Movimientos ${if (periodo == "Hoy") "hoy" else periodo}", fontSize = 15.sp, fontWeight = FontWeight.SemiBold, color = TextoSecundario)
+                Text("${movimientos.size}", fontSize = 36.sp, fontWeight = FontWeight.ExtraBold, color = TextoPrincipal)
                 Text(
                     "${movimientos.count { it.tipo == TipoMovimiento.ENTRADA }} entradas · ${movimientos.count { it.tipo == TipoMovimiento.SALIDA }} salidas",
-                    fontSize = 14.sp, color = GTextoSuave
+                    fontSize = 14.sp, color = TextoSecundario
                 )
             }
         }
@@ -153,13 +157,13 @@ fun GerenciaPanelView(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Text("Stock por ubicación", fontSize = 19.sp, fontWeight = FontWeight.ExtraBold, color = GTexto)
+                Text("Stock por ubicación", fontSize = 19.sp, fontWeight = FontWeight.ExtraBold, color = TextoPrincipal)
                 Text(
                     "Administrar tiendas", fontSize = 15.sp, fontWeight = FontWeight.Bold, color = Azul,
                     modifier = Modifier.clickable { navController.navigate(Ruta.GerenciaGestionTiendas.ruta) }
                 )
             }
-            if (ubicaciones.isEmpty()) Text("Sin sucursales.", fontSize = 15.sp, color = GTextoSuave)
+            if (ubicaciones.isEmpty()) Text("Sin sucursales.", fontSize = 15.sp, color = TextoSecundario)
             ubicaciones.forEach { u ->
                 val inactiva = !u.sucursal.activa
                 Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
@@ -167,16 +171,16 @@ fun GerenciaPanelView(
                         Text(
                             u.sucursal.nombre + if (inactiva) " · inactiva" else "",
                             fontSize = 16.sp, fontWeight = FontWeight.SemiBold,
-                            color = if (inactiva) GTextoSuave else GTexto
+                            color = if (inactiva) TextoSecundario else TextoPrincipal
                         )
-                        Text("${u.total}", fontSize = 16.sp, fontWeight = FontWeight.Bold, color = if (inactiva) GTextoSuave else GTexto)
+                        Text("${u.total}", fontSize = 16.sp, fontWeight = FontWeight.Bold, color = if (inactiva) TextoSecundario else TextoPrincipal)
                     }
                     Box(modifier = Modifier.fillMaxWidth().height(10.dp).background(Color(0xFFE9EDF3), RoundedCornerShape(5.dp))) {
                         Box(
                             modifier = Modifier
                                 .fillMaxWidth((u.total.toFloat() / maximo).coerceIn(0.03f, 1f))
                                 .height(10.dp)
-                                .background(if (inactiva) Color(0xFF94A3B8) else AzulPanel, RoundedCornerShape(5.dp))
+                                .background(if (inactiva) Color(0xFF94A3B8) else Azul, RoundedCornerShape(5.dp))
                         )
                     }
                 }
@@ -187,10 +191,9 @@ fun GerenciaPanelView(
             modifier = Modifier.fillMaxWidth().background(Color.White, RoundedCornerShape(24.dp)).padding(20.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            Text("Reportes PDF", fontSize = 19.sp, fontWeight = FontWeight.ExtraBold, color = GTexto)
-            FilaReporte("Reposición sugerida", "Productos bajo el mínimo y cuánto pedir") {
-                exportarReposicionPdf(contexto, productos, stocks, tiendas)
-            }
+            // Reporte del período elegido arriba (los PDF de Stock e Historial están en sus pantallas,
+            // porque exportan lo que muestran sus filtros)
+            Text("Reporte PDF", fontSize = 19.sp, fontWeight = FontWeight.ExtraBold, color = TextoPrincipal)
             FilaReporte("Mermas y pérdidas", "Ajustes y dañados · $periodo") {
                 exportarMermasPdf(contexto, periodo, desde, historial, incidencias, productos, tiendas)
             }
@@ -207,8 +210,8 @@ private fun FilaReporte(titulo: String, detalle: String, onClick: () -> Unit) {
         horizontalArrangement = Arrangement.spacedBy(10.dp)
     ) {
         Column(modifier = Modifier.weight(1f)) {
-            Text(titulo, fontSize = 16.sp, fontWeight = FontWeight.SemiBold, color = GTexto)
-            Text(detalle, fontSize = 13.sp, color = GTextoSuave)
+            Text(titulo, fontSize = 16.sp, fontWeight = FontWeight.SemiBold, color = TextoPrincipal)
+            Text(detalle, fontSize = 13.sp, color = TextoSecundario)
         }
         BotonPdf(onClick)
     }

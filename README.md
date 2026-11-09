@@ -60,20 +60,33 @@ Versiones principales (ver `gradle/libs.versions.toml`): AGP 9.4.1, Kotlin 2.2.1
 
 ```
 app/src/main/java/com/bexai/multitienda/
-├── model/        Entidades de Room y clases de datos (Producto, Sucursal, Movimiento, Conteo, Recepcion, Reposicion…)
-├── data/         DAO, AppDatabase, repositorios y datos de prueba (DemoDataSeeder)
-├── viewmodel/    Un ViewModel por flujo: Login, Escaner, Conteo, Recepcion, Encargado, Gerencia…
+├── model/            Entidades de Room y clases de datos (Producto, Sucursal, Movimiento, Conteo, Recepcion…)
+├── data/
+│   ├── dao/          Un DAO por tabla (consultas SQL de Room)
+│   ├── repository/   Reglas de negocio que tocan varias tablas (Existencias, Conteo, Recepcion, Usuario)
+│   ├── local/        AppDatabase (Singleton) y DemoDataSeeder (datos de prueba)
+│   └── sesion/       Estado en memoria compartido entre pantallas (SesionSucursal, HistorialFiltro)
+├── viewmodel/
+│   ├── comun/        LoginViewModel y el manejador de errores de corrutinas
+│   ├── operador/     Escaner, Conteo, Recepcion, Inicio y SeleccionarSucursal
+│   ├── encargado/    EncargadoViewModel
+│   └── gerencia/     GerenciaViewModel, armado de alertas y modelos de estado
 ├── ui/
 │   ├── components/   Componentes reutilizables (barra inferior, campo validado, pastilla de sucursal…)
-│   ├── navigation/   Rutas, NavHost y grafos de Operador, Encargado y Gerencia
+│   ├── navigation/   Rutas, NavHost, un grafo por rol y ConBarraRol (barra inferior común)
 │   ├── theme/        Colores, tipografía y tema Material 3
-│   └── view/         Pantallas, separadas por rol (operador/, encargado/, gerencia/)
-└── util/         Generación y envío de PDF
+│   └── view/
+│       ├── comun/        Login y Cuenta
+│       ├── operador/     inicio/, escaner/, conteo/ y recepcion/
+│       ├── encargado/    Stock, Diferencias, Alertas y revisión de cajas
+│       └── gerencia/     Panel, Stock, Alertas, Historial, Tiendas y reportes PDF
+└── util/             Generación y envío de PDF
 ```
 
 - **Vista (Composable)**: solo muestra el estado y avisa las acciones del usuario.
 - **ViewModel**: valida los datos, mantiene el estado en `StateFlow` y llama a los repositorios.
 - **Repositorio / DAO**: lee y escribe en Room. Las operaciones que tocan varias tablas (por ejemplo aprobar un conteo o enviar una recepción) se hacen en una transacción.
+- **Errores**: las corrutinas de los ViewModel usan un `CoroutineExceptionHandler` común (`viewmodel/comun/ManejoErrores.kt`); si falla una operación la app muestra un aviso o lo registra en Logcat en vez de cerrarse. La cámara y los PDF también capturan sus errores.
 
 ## Persistencia local (Room)
 

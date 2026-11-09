@@ -1,31 +1,37 @@
 package com.bexai.multitienda.ui.navigation
 
+import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
+import androidx.compose.ui.Modifier
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavGraphBuilder
-import androidx.navigation.NavType
-import androidx.navigation.navArgument
 import androidx.navigation.NavHostController
+import androidx.navigation.NavType
 import androidx.navigation.compose.composable
+import androidx.navigation.navArgument
 import androidx.navigation.navigation
-import androidx.compose.foundation.layout.padding
-import androidx.compose.ui.Modifier
-import com.bexai.multitienda.ui.view.CuentaView
-import com.bexai.multitienda.data.SesionSucursal
-import com.bexai.multitienda.ui.view.operador.SeleccionarSucursalView
-import com.bexai.multitienda.viewmodel.SeleccionarSucursalViewModel
+import com.bexai.multitienda.data.sesion.SesionSucursal
+import com.bexai.multitienda.ui.view.comun.CuentaView
 import com.bexai.multitienda.ui.view.encargado.AlertasEncargadoView
 import com.bexai.multitienda.ui.view.encargado.DiferenciasStockView
 import com.bexai.multitienda.ui.view.encargado.EncargadoHomeView
 import com.bexai.multitienda.ui.view.encargado.RevisarRecepcionView
-import com.bexai.multitienda.viewmodel.EncargadoViewModel
+import com.bexai.multitienda.ui.view.operador.inicio.SeleccionarSucursalView
+import com.bexai.multitienda.viewmodel.encargado.EncargadoViewModel
+import com.bexai.multitienda.viewmodel.operador.SeleccionarSucursalViewModel
 
+/**
+ * Grafo de navegación del Encargado: elegir sucursal, Stock, Diferencias, Alertas, revisar una
+ * recepción de caja y Cuenta. Las pestañas principales van dentro de ConBarraEncargado.
+ */
 fun NavGraphBuilder.encargadoNavGraph(navController: NavHostController) {
     navigation(
         startDestination = Ruta.EncargadoSucursal.ruta,
         route = Ruta.GRAFO_ENCARGADO
     ) {
+        // ---------- Elegir sucursal ----------
         composable(Ruta.EncargadoSucursal.ruta) {
             val viewModel: SeleccionarSucursalViewModel = viewModel()
             val sucursales by viewModel.sucursales.collectAsState()
@@ -45,6 +51,7 @@ fun NavGraphBuilder.encargadoNavGraph(navController: NavHostController) {
                 }
             )
         }
+        // ---------- Stock (pantalla de inicio del encargado) ----------
         composable(Ruta.EncargadoInicio.ruta) {
             ConBarraEncargado(navController) { padding ->
                 EncargadoHomeView(
@@ -53,11 +60,7 @@ fun NavGraphBuilder.encargadoNavGraph(navController: NavHostController) {
                 )
             }
         }
-        composable(Ruta.EncargadoStock.ruta) {
-            ConBarraEncargado(navController) { padding ->
-                EncargadoHomeView(modifier = Modifier.padding(padding))
-            }
-        }
+        // ---------- Diferencias del último conteo ----------
         composable(Ruta.EncargadoDiferencias.ruta) {
             ConBarraEncargado(navController) { padding ->
                 DiferenciasStockView(
@@ -66,6 +69,7 @@ fun NavGraphBuilder.encargadoNavGraph(navController: NavHostController) {
                 )
             }
         }
+        // ---------- Revisar una recepción de caja ----------
         composable(
             route = Ruta.EncargadoRevisarRecepcion.patron,
             arguments = listOf(navArgument("recepcionId") { type = NavType.IntType })
@@ -73,7 +77,9 @@ fun NavGraphBuilder.encargadoNavGraph(navController: NavHostController) {
             val recepcionId = entrada.arguments?.getInt("recepcionId") ?: 0
             val viewModel: EncargadoViewModel = viewModel()
             val pendientes by viewModel.recepcionesPendientes.collectAsState()
-            val lineas by viewModel.lineasRecepcion(recepcionId).collectAsState(initial = emptyList())
+            // remember: sin él se creaba un Flow nuevo (y una consulta nueva) en cada recomposición
+            val lineas by remember(recepcionId) { viewModel.lineasRecepcion(recepcionId) }
+                .collectAsState(initial = emptyList())
             RevisarRecepcionView(
                 recepcion = pendientes.firstOrNull { it.id == recepcionId },
                 lineas = lineas,
@@ -84,6 +90,7 @@ fun NavGraphBuilder.encargadoNavGraph(navController: NavHostController) {
                 }
             )
         }
+        // ---------- Alertas ----------
         composable(Ruta.EncargadoAlertas.ruta) {
             ConBarraEncargado(navController) { padding ->
                 AlertasEncargadoView(
@@ -93,6 +100,7 @@ fun NavGraphBuilder.encargadoNavGraph(navController: NavHostController) {
                 )
             }
         }
+        // ---------- Cuenta ----------
         composable(Ruta.EncargadoCuenta.ruta) {
             val viewModel: EncargadoViewModel = viewModel()
             val sucursales by viewModel.sucursales.collectAsState()

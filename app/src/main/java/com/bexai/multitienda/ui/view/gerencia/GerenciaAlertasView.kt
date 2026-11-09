@@ -1,5 +1,6 @@
 package com.bexai.multitienda.ui.view.gerencia
 
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -15,40 +16,48 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.statusBarsPadding
-import androidx.compose.animation.core.tween
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
-import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.ui.text.input.KeyboardType
-import kotlinx.coroutines.launch
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavHostController
-import com.bexai.multitienda.data.HistorialFiltro
+import com.bexai.multitienda.data.sesion.HistorialFiltro
 import com.bexai.multitienda.ui.navigation.Ruta
-import com.bexai.multitienda.viewmodel.AlertaItem
-import com.bexai.multitienda.viewmodel.GerenciaViewModel
-import com.bexai.multitienda.viewmodel.TipoAlerta
+import com.bexai.multitienda.ui.theme.AzulOscuro
+import com.bexai.multitienda.ui.theme.AzulSuave
+import com.bexai.multitienda.ui.theme.FondoPantalla
+import com.bexai.multitienda.ui.theme.NaranjaFondo
+import com.bexai.multitienda.ui.theme.NaranjaTexto
+import com.bexai.multitienda.ui.theme.Peligro
+import com.bexai.multitienda.ui.theme.PeligroSuave
+import com.bexai.multitienda.ui.theme.TextoPrincipal
+import com.bexai.multitienda.ui.theme.TextoSecundario
+import com.bexai.multitienda.viewmodel.gerencia.AlertaItem
+import com.bexai.multitienda.viewmodel.gerencia.GerenciaViewModel
+import com.bexai.multitienda.viewmodel.gerencia.TipoAlerta
+import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -64,9 +73,9 @@ private fun etiqueta(t: TipoAlerta) = when (t) {
 }
 
 private fun colores(t: TipoAlerta): Pair<Color, Color> = when (t) {
-    TipoAlerta.MINIMO -> GRojoTexto to GRojoFondo
-    TipoAlerta.DESCALCE -> GNaranjaTexto to GNaranjaFondo
-    TipoAlerta.REPOSICION -> GAzulTexto to GAzulFondo
+    TipoAlerta.MINIMO -> Peligro to PeligroSuave
+    TipoAlerta.DESCALCE -> NaranjaTexto to NaranjaFondo
+    TipoAlerta.REPOSICION -> AzulOscuro to AzulSuave
     TipoAlerta.CAJA -> VioletaTexto to VioletaFondo
 }
 
@@ -110,13 +119,13 @@ fun GerenciaAlertasView(
     val base = if (verRevisadas) revisadas else activas
     val visibles = base.filter { tipo == null || it.tipo == tipo }
 
-    Box(modifier = modifier.fillMaxSize().background(GFondo)) {
+    Box(modifier = modifier.fillMaxSize().background(FondoPantalla)) {
         LazyColumn(
             modifier = Modifier.fillMaxSize().statusBarsPadding(),
             contentPadding = PaddingValues(horizontal = 20.dp, vertical = 16.dp),
             verticalArrangement = Arrangement.spacedBy(14.dp)
         ) {
-            item { Text("Alertas", fontSize = 32.sp, fontWeight = FontWeight.ExtraBold, color = GTexto) }
+            item { Text("Alertas", fontSize = 32.sp, fontWeight = FontWeight.ExtraBold, color = TextoPrincipal) }
 
             item {
                 Row(
@@ -143,7 +152,7 @@ fun GerenciaAlertasView(
                 item {
                     Text(
                         if (verRevisadas) "Todavía no hay alertas revisadas." else "No hay alertas activas.",
-                        fontSize = 15.sp, color = GTextoSuave
+                        fontSize = 15.sp, color = TextoSecundario
                     )
                 }
             }
@@ -236,7 +245,7 @@ private fun Pestana(texto: String, activa: Boolean, modifier: Modifier, onClick:
             .clickable(onClick = onClick),
         contentAlignment = Alignment.Center
     ) {
-        Text(texto, fontSize = 16.sp, fontWeight = FontWeight.Bold, color = if (activa) GTexto else GTextoSuave)
+        Text(texto, fontSize = 16.sp, fontWeight = FontWeight.Bold, color = if (activa) TextoPrincipal else TextoSecundario)
     }
 }
 
@@ -246,13 +255,13 @@ private fun Boton(texto: String, relleno: Boolean, modifier: Modifier = Modifier
         modifier = modifier
             .height(48.dp)
             .then(
-                if (relleno) Modifier.background(GTexto, RoundedCornerShape(24.dp))
+                if (relleno) Modifier.background(TextoPrincipal, RoundedCornerShape(24.dp))
                 else Modifier.border(BorderStroke(1.dp, Color(0xFFE2E8F0)), RoundedCornerShape(24.dp))
             )
             .clickable(onClick = onClick),
         contentAlignment = Alignment.Center
     ) {
-        Text(texto, fontSize = 15.sp, fontWeight = FontWeight.Bold, color = if (relleno) Color.White else GTexto)
+        Text(texto, fontSize = 15.sp, fontWeight = FontWeight.Bold, color = if (relleno) Color.White else TextoPrincipal)
     }
 }
 
@@ -282,14 +291,14 @@ private fun TarjetaAlerta(
                 etiqueta(alerta.tipo), fontSize = 14.sp, fontWeight = FontWeight.ExtraBold, color = color,
                 modifier = Modifier.background(fondo, RoundedCornerShape(10.dp)).padding(horizontal = 10.dp, vertical = 6.dp)
             )
-            Text(hora, fontSize = 15.sp, color = GTextoSuave)
+            Text(hora, fontSize = 15.sp, color = TextoSecundario)
         }
-        Text(alerta.titulo, fontSize = 20.sp, fontWeight = FontWeight.ExtraBold, color = GTexto)
-        Text(alerta.detalle, fontSize = 15.sp, color = GTextoSuave)
+        Text(alerta.titulo, fontSize = 20.sp, fontWeight = FontWeight.ExtraBold, color = TextoPrincipal)
+        Text(alerta.detalle, fontSize = 15.sp, color = TextoSecundario)
         if (!alerta.nota.isNullOrBlank()) {
             Text(
-                "Nota: ${alerta.nota}", fontSize = 14.sp, color = GTexto,
-                modifier = Modifier.fillMaxWidth().background(GFondo, RoundedCornerShape(12.dp)).padding(10.dp)
+                "Nota: ${alerta.nota}", fontSize = 14.sp, color = TextoPrincipal,
+                modifier = Modifier.fillMaxWidth().background(FondoPantalla, RoundedCornerShape(12.dp)).padding(10.dp)
             )
         }
         if (alerta.revisada) {
@@ -327,7 +336,7 @@ private fun DialogoDespacho(
         title = { Text(titulo) },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                Text("${alerta.titulo} · ${alerta.detalle.substringBefore(" ·")}", fontSize = 14.sp, color = GTextoSuave)
+                Text("${alerta.titulo} · ${alerta.detalle.substringBefore(" ·")}", fontSize = 14.sp, color = TextoSecundario)
                 OutlinedTextField(
                     value = cantidadTexto,
                     onValueChange = { cantidadTexto = it.filter { c -> c.isDigit() }.take(4) },
@@ -342,8 +351,8 @@ private fun DialogoDespacho(
                     label = { Text("Proveedor (opcional)") },
                     singleLine = true
                 )
-                if (!valida) Text("Ingresa una cantidad entre 1 y 9999", color = GRojoTexto, fontSize = 13.sp)
-                else Text("El operador recibirá la caja escaneando su código DSP.", color = GTextoSuave, fontSize = 13.sp)
+                if (!valida) Text("Ingresa una cantidad entre 1 y 9999", color = Peligro, fontSize = 13.sp)
+                else Text("El operador recibirá la caja escaneando su código DSP.", color = TextoSecundario, fontSize = 13.sp)
             }
         },
         confirmButton = { TextButton(enabled = valida, onClick = { onConfirmar(cantidad, proveedor) }) { Text(confirmar) } },

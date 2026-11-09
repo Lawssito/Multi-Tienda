@@ -11,6 +11,8 @@ import androidx.compose.material.icons.outlined.Person
 import androidx.compose.material.icons.outlined.QrCodeScanner
 import com.bexai.multitienda.ui.components.ItemNav
 
+// Botones de la barra inferior de cada rol (los usa ConBarraRol).
+
 val itemsOperador = listOf(
     ItemNav(Ruta.OperadorInicio.ruta, "Inicio", Icons.Outlined.Home),
     ItemNav(Ruta.OperadorCuenta.ruta, "Cuenta", Icons.Outlined.Person)

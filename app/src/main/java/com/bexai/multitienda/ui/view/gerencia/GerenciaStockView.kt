@@ -1,5 +1,6 @@
 package com.bexai.multitienda.ui.view.gerencia
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -11,10 +12,11 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.imePadding
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
@@ -22,8 +24,6 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.foundation.BorderStroke
-import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
@@ -52,7 +52,12 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.bexai.multitienda.model.Producto
 import com.bexai.multitienda.ui.theme.Azul
-import com.bexai.multitienda.viewmodel.GerenciaViewModel
+import com.bexai.multitienda.ui.theme.FondoPantalla
+import com.bexai.multitienda.ui.theme.Peligro
+import com.bexai.multitienda.ui.theme.Rojo
+import com.bexai.multitienda.ui.theme.TextoPrincipal
+import com.bexai.multitienda.ui.theme.TextoSecundario
+import com.bexai.multitienda.viewmodel.gerencia.GerenciaViewModel
 
 /**
  * Stock global (Gerencia): todos los productos con su total y el stock de cada sucursal.
@@ -95,7 +100,7 @@ fun GerenciaStockView(
     Column(
         modifier = modifier
             .fillMaxSize()
-            .background(GFondo)
+            .background(FondoPantalla)
             .statusBarsPadding()
             .padding(horizontal = 20.dp, vertical = 16.dp),
         verticalArrangement = Arrangement.spacedBy(14.dp)
@@ -106,8 +111,8 @@ fun GerenciaStockView(
             verticalAlignment = Alignment.CenterVertically
         ) {
             Column {
-                Text("${productos.sumOf { it.stock }} uds en ${tiendas.size} sucursales", fontSize = 15.sp, color = GTextoSuave)
-                Text("Stock global", fontSize = 32.sp, fontWeight = FontWeight.ExtraBold, color = GTexto)
+                Text("${productos.sumOf { it.stock }} uds en ${tiendas.size} sucursales", fontSize = 15.sp, color = TextoSecundario)
+                Text("Stock global", fontSize = 32.sp, fontWeight = FontWeight.ExtraBold, color = TextoPrincipal)
             }
             BotonPdf(onClick = { exportarStockPdf(contexto, visibles, stocks, tiendas) })
         }
@@ -122,14 +127,14 @@ fun GerenciaStockView(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(10.dp)
         ) {
-            Icon(Icons.Outlined.Search, contentDescription = null, tint = GTextoSuave, modifier = Modifier.size(20.dp))
+            Icon(Icons.Outlined.Search, contentDescription = null, tint = TextoSecundario, modifier = Modifier.size(20.dp))
             Box(modifier = Modifier.weight(1f)) {
-                if (query.isEmpty()) Text("Buscar producto o código", fontSize = 15.sp, color = GTextoSuave)
+                if (query.isEmpty()) Text("Buscar producto o código", fontSize = 15.sp, color = TextoSecundario)
                 BasicTextField(
                     value = query,
                     onValueChange = { query = it },
                     singleLine = true,
-                    textStyle = TextStyle(fontSize = 15.sp, color = GTexto),
+                    textStyle = TextStyle(fontSize = 15.sp, color = TextoPrincipal),
                     modifier = Modifier.fillMaxWidth()
                 )
             }
@@ -146,7 +151,7 @@ fun GerenciaStockView(
         }
 
         if (visibles.isEmpty()) {
-            Text("No hay productos que coincidan", fontSize = 15.sp, color = GTextoSuave)
+            Text("No hay productos que coincidan", fontSize = 15.sp, color = TextoSecundario)
         }
         LazyColumn(
             modifier = Modifier
@@ -165,20 +170,20 @@ fun GerenciaStockView(
                     verticalArrangement = Arrangement.spacedBy(4.dp)
                 ) {
                     Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                        Text(p.nombre, fontSize = 17.sp, fontWeight = FontWeight.Bold, color = GTexto, modifier = Modifier.weight(1f))
+                        Text(p.nombre, fontSize = 17.sp, fontWeight = FontWeight.Bold, color = TextoPrincipal, modifier = Modifier.weight(1f))
                         Text(
                             "${p.stock}", fontSize = 17.sp, fontWeight = FontWeight.Bold,
-                            color = if (p.stock <= 0) GRojo else GTexto
+                            color = if (p.stock <= 0) Rojo else TextoPrincipal
                         )
                     }
                     Text(
                         tiendas.mapIndexed { i, t -> "${nombreCorto(t)} ${porSucursal.getOrElse(i) { 0 }}" }.joinToString(" · "),
                         fontSize = 14.sp,
-                        color = if (hayBajo) GRojoTexto else GTextoSuave
+                        color = if (hayBajo) Peligro else TextoSecundario
                     )
                     Text(
                         "${p.categoria.ifBlank { "Sin categoría" }} · mínimo ${p.stockMinimo}",
-                        fontSize = 13.sp, color = GTextoSuave
+                        fontSize = 13.sp, color = TextoSecundario
                     )
                 }
             }
@@ -230,32 +235,32 @@ private fun HojaStockGlobal(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Column(modifier = Modifier.weight(1f)) {
-                    Text(producto.nombre, fontSize = 22.sp, fontWeight = FontWeight.ExtraBold, color = GTexto)
-                    Text("${producto.categoria.ifBlank { "Sin categoría" }} · total ${producto.stock} uds", fontSize = 14.sp, color = GTextoSuave)
+                    Text(producto.nombre, fontSize = 22.sp, fontWeight = FontWeight.ExtraBold, color = TextoPrincipal)
+                    Text("${producto.categoria.ifBlank { "Sin categoría" }} · total ${producto.stock} uds", fontSize = 14.sp, color = TextoSecundario)
                 }
                 Box(
-                    modifier = Modifier.size(40.dp).background(GFondo, CircleShape).clickable(onClick = onCerrar),
+                    modifier = Modifier.size(40.dp).background(FondoPantalla, CircleShape).clickable(onClick = onCerrar),
                     contentAlignment = Alignment.Center
-                ) { Icon(Icons.Default.Close, contentDescription = "Cerrar", tint = GTexto) }
+                ) { Icon(Icons.Default.Close, contentDescription = "Cerrar", tint = TextoPrincipal) }
             }
 
-            Text("Por sucursal", fontSize = 16.sp, fontWeight = FontWeight.SemiBold, color = GTexto)
+            Text("Por sucursal", fontSize = 16.sp, fontWeight = FontWeight.SemiBold, color = TextoPrincipal)
             Column(
-                modifier = Modifier.fillMaxWidth().background(GFondo, RoundedCornerShape(16.dp)).padding(14.dp),
+                modifier = Modifier.fillMaxWidth().background(FondoPantalla, RoundedCornerShape(16.dp)).padding(14.dp),
                 verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 filas.forEach { (nombre, cantidad) ->
                     Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                        Text(nombre, fontSize = 15.sp, color = GTexto)
+                        Text(nombre, fontSize = 15.sp, color = TextoPrincipal)
                         Text(
                             "$cantidad uds", fontSize = 15.sp, fontWeight = FontWeight.Bold,
-                            color = if (cantidad < producto.stockMinimo) GRojoTexto else GTexto
+                            color = if (cantidad < producto.stockMinimo) Peligro else TextoPrincipal
                         )
                     }
                 }
             }
 
-            Text("Stock mínimo (por sucursal)", fontSize = 16.sp, fontWeight = FontWeight.SemiBold, color = GTexto)
+            Text("Stock mínimo (por sucursal)", fontSize = 16.sp, fontWeight = FontWeight.SemiBold, color = TextoPrincipal)
             OutlinedTextField(
                 value = texto,
                 onValueChange = { texto = it.filter { c -> c.isDigit() }.take(4) },
@@ -267,7 +272,7 @@ private fun HojaStockGlobal(
             )
             Text(
                 if (valido) "Cada sucursal se alerta cuando baja de este número." else "Ingresa un número entre 0 y 9999",
-                fontSize = 14.sp, color = if (valido) GTextoSuave else GRojoTexto
+                fontSize = 14.sp, color = if (valido) TextoSecundario else Peligro
             )
             Box(
                 modifier = Modifier

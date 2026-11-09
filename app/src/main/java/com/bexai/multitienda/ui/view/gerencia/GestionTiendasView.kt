@@ -2,19 +2,19 @@ package com.bexai.multitienda.ui.view.gerencia
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.material.icons.automirrored.outlined.ArrowBack
-import androidx.compose.ui.graphics.Color
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.outlined.ArrowBack
 import androidx.compose.material.icons.outlined.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -23,7 +23,7 @@ import androidx.navigation.NavHostController
 import com.bexai.multitienda.model.Sucursal
 import com.bexai.multitienda.ui.components.ValidatedTextField
 import com.bexai.multitienda.ui.theme.*
-import com.bexai.multitienda.viewmodel.GerenciaViewModel
+import com.bexai.multitienda.viewmodel.gerencia.GerenciaViewModel
 import kotlinx.coroutines.launch
 
 /**
@@ -43,7 +43,7 @@ fun GestionTiendasView(
     val snackbarHostState = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
 
-    Box(modifier = Modifier.fillMaxSize().background(GFondo)) {
+    Box(modifier = Modifier.fillMaxSize().background(FondoPantalla)) {
         LazyColumn(
             modifier = Modifier.fillMaxSize().statusBarsPadding(),
             contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 16.dp, bottom = 32.dp),
@@ -58,12 +58,12 @@ fun GestionTiendasView(
                         modifier = Modifier.size(44.dp).background(Color.White, CircleShape).clickable { navController.popBackStack() },
                         contentAlignment = Alignment.Center
                     ) {
-                        Icon(Icons.AutoMirrored.Outlined.ArrowBack, contentDescription = "Volver", tint = GTexto)
+                        Icon(Icons.AutoMirrored.Outlined.ArrowBack, contentDescription = "Volver", tint = TextoPrincipal)
                     }
                     Spacer(Modifier.width(12.dp))
                     Column(modifier = Modifier.weight(1f)) {
-                        Text("Gerencia", fontSize = 14.sp, color = GTextoSuave)
-                        Text("Tiendas habilitadas", fontSize = 24.sp, fontWeight = FontWeight.ExtraBold, color = GTexto)
+                        Text("Gerencia", fontSize = 14.sp, color = TextoSecundario)
+                        Text("Tiendas habilitadas", fontSize = 24.sp, fontWeight = FontWeight.ExtraBold, color = TextoPrincipal)
                     }
                     Text(
                         "+ Nueva", fontSize = 15.sp, fontWeight = FontWeight.Bold, color = Color.White,
@@ -77,11 +77,11 @@ fun GestionTiendasView(
             item {
                 Text(
                     "Una tienda deshabilitada no aparece al elegir sucursal ni recibe movimientos.",
-                    fontSize = 14.sp, color = GTextoSuave
+                    fontSize = 14.sp, color = TextoSecundario
                 )
             }
             if (tiendas.isEmpty()) {
-                item { Text("No hay tiendas registradas", color = GTextoSuave) }
+                item { Text("No hay tiendas registradas", color = TextoSecundario) }
             }
             items(tiendas, key = { it.id }) { tienda ->
                 val propias = stocks.filter { it.sucursalId == tienda.id && it.cantidad > 0 }
@@ -155,28 +155,28 @@ private fun TiendaCard(
     unidades: Int,
     onToggleActiva: (Boolean) -> Unit
 ) {
-    val color = if (tienda.activa) GTexto else GTextoSuave
+    val color = if (tienda.activa) TextoPrincipal else TextoSecundario
     Column(
         modifier = Modifier.fillMaxWidth().background(Color.White, RoundedCornerShape(24.dp)).padding(18.dp)
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Column(modifier = Modifier.weight(1f)) {
                 Text(tienda.nombre, fontSize = 18.sp, fontWeight = FontWeight.Bold, color = color)
-                Text("${tienda.direccion} · ID ${tienda.id}", fontSize = 14.sp, color = GTextoSuave)
+                Text("${tienda.direccion} · ID ${tienda.id}", fontSize = 14.sp, color = TextoSecundario)
             }
             Switch(checked = tienda.activa, onCheckedChange = onToggleActiva)
         }
         Spacer(Modifier.height(10.dp))
         Row(verticalAlignment = Alignment.CenterVertically) {
             Text("$productos", fontSize = 15.sp, fontWeight = FontWeight.Bold, color = color)
-            Text(" productos", fontSize = 14.sp, color = GTextoSuave)
+            Text(" productos", fontSize = 14.sp, color = TextoSecundario)
             Spacer(Modifier.width(16.dp))
             Text("$unidades", fontSize = 15.sp, fontWeight = FontWeight.Bold, color = color)
-            Text(" unidades", fontSize = 14.sp, color = GTextoSuave)
+            Text(" unidades", fontSize = 14.sp, color = TextoSecundario)
             Spacer(Modifier.weight(1f))
             Text(
                 if (tienda.activa) "Activa" else "Inactiva: no aparece al operador",
-                fontSize = 13.sp, color = GTextoSuave
+                fontSize = 13.sp, color = TextoSecundario
             )
         }
     }
