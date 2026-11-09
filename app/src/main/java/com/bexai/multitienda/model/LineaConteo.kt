@@ -10,3 +10,14 @@ data class LineaConteo(
 ) {
     val diferencia: Int get() = contado - sistema   // negativo = falta, positivo = sobra
 }
+
+/** Línea de un conteo enviado cuya cantidad contada no coincide con el sistema (para las alertas de Gerencia). */
+data class DescalceConteo(
+    val conteoId: Int,
+    val sucursalId: Int,
+    val productoId: Int,
+    val nombre: String,
+    val sistema: Int,
+    val contado: Int,
+    val fecha: Long?
+)

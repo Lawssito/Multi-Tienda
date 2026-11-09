@@ -1,21 +1,15 @@
 package com.bexai.multitienda.ui.navigation
 
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
-import androidx.navigation.compose.navigation
 import androidx.navigation.compose.rememberNavController
 import com.bexai.multitienda.model.Rol
 import com.bexai.multitienda.ui.theme.MultiTiendaTheme
-import com.bexai.multitienda.ui.view.AccionPantalla
 import com.bexai.multitienda.ui.view.LoginView
-import com.bexai.multitienda.ui.view.PantallaVacia
-import com.bexai.multitienda.ui.view.ProductosView
 
 @Composable
 fun AppNavHost(

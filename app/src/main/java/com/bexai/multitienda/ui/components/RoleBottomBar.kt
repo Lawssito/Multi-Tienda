@@ -17,12 +17,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.CompareArrows
-import androidx.compose.material.icons.outlined.Dashboard
-import androidx.compose.material.icons.outlined.History
 import androidx.compose.material.icons.outlined.Home
-import androidx.compose.material.icons.outlined.Inventory2
-import androidx.compose.material.icons.outlined.Notifications
 import androidx.compose.material.icons.outlined.Person
 import androidx.compose.material.icons.outlined.QrCodeScanner
 import androidx.compose.material3.Icon
@@ -45,6 +40,7 @@ data class ItemNav(
     val ruta : String,
     val etiqueta : String,
     val icono : ImageVector,
+    val badge : Int = 0,
 )
 
 @Composable
@@ -122,6 +118,19 @@ private fun ItemBarra(
             contentAlignment = Alignment.Center
         ) {
             Icon(item.icono, contentDescription = null, tint = color)
+            if (item.badge > 0) {
+                Text(
+                    text = if (item.badge > 9) "9+" else "${item.badge}",
+                    color = Color.White,
+                    fontSize = 10.sp,
+                    fontWeight = FontWeight.Bold,
+                    modifier = Modifier
+                        .align(Alignment.TopEnd)
+                        .offset(x = (-6).dp, y = (-2).dp)
+                        .background(Color(0xFFDC2626), RoundedCornerShape(8.dp))
+                        .padding(horizontal = 5.dp, vertical = 1.dp)
+                )
+            }
         }
         Text(
             text = item.etiqueta,

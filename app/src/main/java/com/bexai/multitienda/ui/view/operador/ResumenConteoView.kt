@@ -101,13 +101,20 @@ fun ResumenConteoView(
         }
 
         // Avisos
+        if (estado.sinContar > 0) {
+            Text(
+                "Contaste ${estado.contados} de ${estado.total} productos. " +
+                    "Los ${estado.sinContar} restantes quedan sin contar y no se modificarán.",
+                color = Advertencia,
+                fontWeight = FontWeight.SemiBold,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .background(AdvertenciaSuave, RoundedCornerShape(12.dp))
+                    .padding(12.dp)
+            )
+        }
         Text(
-            buildString {
-                append("Al enviar, el encargado revisará el conteo. El stock solo cambia cuando lo apruebe.")
-                if (estado.sinContar > 0) {
-                    append("\n${estado.sinContar} productos sin contar no se ajustarán.")
-                }
-            },
+            "Al enviar, el encargado revisará el conteo. El stock solo cambia cuando lo apruebe.",
             color = TextoSecundario
         )
 

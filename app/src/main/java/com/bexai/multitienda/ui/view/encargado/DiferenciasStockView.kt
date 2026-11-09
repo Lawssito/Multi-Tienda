@@ -1,17 +1,31 @@
 package com.bexai.multitienda.ui.view.encargado
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.outlined.CompareArrows
-import androidx.compose.material.icons.automirrored.outlined.Logout
-import androidx.compose.material.icons.automirrored.outlined.Undo
-import androidx.compose.material.icons.outlined.*
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -19,224 +33,127 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
-import androidx.navigation.NavHostController
-import com.bexai.multitienda.model.Producto
-import com.bexai.multitienda.ui.navigation.Ruta
-import com.bexai.multitienda.ui.theme.*
+import com.bexai.multitienda.ui.components.PastillaSucursal
+import com.bexai.multitienda.ui.theme.Azul
+import com.bexai.multitienda.viewmodel.DiferenciaStock
 import com.bexai.multitienda.viewmodel.EncargadoViewModel
 import kotlinx.coroutines.launch
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
+
+// Colores del mockup v6 (Diferencias.dc.html)
+private val FondoPantalla = Color(0xFFF4F6FA)
+private val Texto = Color(0xFF0F172A)
+private val TextoSuave = Color(0xFF5B6474)
+private val NaranjaTexto = Color(0xFFB45309)
+private val NaranjaFondo = Color(0xFFFFEBD2)
+private val AzulTexto = Color(0xFF1D4ED8)
+private val AzulFondo = Color(0xFFDBEAFE)
+private val RojoTexto = Color(0xFFB91C1C)
+private val RojoFondo = Color(0xFFFEE2E2)
 
 /**
- * DiferenciasStockView: permite comparar el stock en sistema con el stock físico contado
- * y registrar ajustes de conciliación con soporte de deshacer (Undo).
+ * Diferencias de la sucursal (mockup "Diferencias"): solo análisis del último conteo;
+ * las tareas pendientes (cajas y conteos por revisar) viven en Alertas.
+ * Resumen (con descalce y bajo mínimo), filtros Todas, Faltantes y Sobrantes, y cada
+ * diferencia del último conteo con acceso a "Declarar reposición".
  */
 @Composable
 fun DiferenciasStockView(
-    navController: NavHostController,
+    modifier: Modifier = Modifier,
+    onCambiarSucursal: () -> Unit = {},
     viewModel: EncargadoViewModel = viewModel()
 ) {
+    val diferencias by viewModel.diferenciasUltimoConteo.collectAsState()
+    val fechaConteo by viewModel.fechaUltimoConteo.collectAsState()
     val productos by viewModel.productos.collectAsState()
-    val conteoFisico by viewModel.conteoFisico.collectAsState()
-    val ultimoAjuste by viewModel.ultimoAjuste.collectAsState()
-    val conteosEnviados by viewModel.conteosEnviados.collectAsState()
+    val sucursales by viewModel.sucursales.collectAsState()
+    val sucursalId by viewModel.sucursalSeleccionadaId.collectAsState()
 
-    val snackbarHostState = remember { SnackbarHostState() }
+    val snackbar = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
+    var filtro by remember { mutableStateOf("Todas") }
+    var reponer by remember { mutableStateOf<DiferenciaStock?>(null) }
 
-    var productoParaAjustar by remember { mutableStateOf<Producto?>(null) }
-    var stockContadoParaAjustar by remember { mutableIntStateOf(0) }
-    var motivoTexto by remember { mutableStateOf("") }
-
-    Scaffold(
-        snackbarHost = { SnackbarHost(snackbarHostState) },
-        containerColor = MaterialTheme.colorScheme.background
-    ) { padding ->
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(padding)
-                .statusBarsPadding()
-                .padding(horizontal = 16.dp, vertical = 12.dp)
-        ) {
-            // Encabezado
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Column {
-                    Text(
-                        text = "Diferencias de Stock",
-                        style = MaterialTheme.typography.headlineSmall,
-                        fontWeight = FontWeight.Bold,
-                        color = TextoPrincipal
-                    )
-                    Text(
-                        text = "Inventario registrado vs conteo físico",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = TextoSecundario
-                    )
-                }
-
-                IconButton(
-                    onClick = {
-                        navController.navigate(Ruta.Login.ruta) {
-                            popUpTo(0) { inclusive = true }
-                        }
-                    }
-                ) {
-                    Icon(
-                        imageVector = Icons.AutoMirrored.Outlined.Logout,
-                        contentDescription = "Cerrar sesión",
-                        tint = Peligro
-                    )
-                }
-            }
-
-            Spacer(modifier = Modifier.height(10.dp))
-
-            // Banner de Deshacer (Undo) si hay un ajuste previo
-            if (ultimoAjuste != null) {
-                Card(
-                    colors = CardDefaults.cardColors(containerColor = AzulSuave),
-                    shape = RoundedCornerShape(14.dp),
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = 14.dp, vertical = 10.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.SpaceBetween
-                    ) {
-                        Column(modifier = Modifier.weight(1f)) {
-                            Text(
-                                text = "Ajuste aplicado a ${ultimoAjuste?.nombre}",
-                                fontWeight = FontWeight.Bold,
-                                fontSize = 13.sp,
-                                color = AzulOscuro
-                            )
-                            Text(
-                                text = "Anterior: ${ultimoAjuste?.stockAnterior} uds ➔ Nuevo: ${ultimoAjuste?.stockNuevo} uds",
-                                fontSize = 12.sp,
-                                color = AzulOscuro
-                            )
-                        }
-
-                        Button(
-                            onClick = {
-                                viewModel.deshacerUltimoAjuste { msg ->
-                                    scope.launch { snackbarHostState.showSnackbar(msg) }
-                                }
-                            },
-                            colors = ButtonDefaults.buttonColors(containerColor = Azul),
-                            shape = RoundedCornerShape(10.dp),
-                            contentPadding = PaddingValues(horizontal = 10.dp, vertical = 4.dp)
-                        ) {
-                            Icon(
-                                Icons.AutoMirrored.Outlined.Undo,
-                                contentDescription = null,
-                                modifier = Modifier.size(16.dp)
-                            )
-                            Spacer(modifier = Modifier.width(4.dp))
-                            Text("Deshacer", fontSize = 12.sp)
-                        }
-                    }
-                }
-                Spacer(modifier = Modifier.height(10.dp))
-            }
-
-            // Lista de productos con comparador de stock
-            LazyColumn(
-                modifier = Modifier.weight(1f),
-                verticalArrangement = Arrangement.spacedBy(10.dp),
-                contentPadding = PaddingValues(bottom = 80.dp)
-            ) {
-                items(conteosEnviados, key = { "conteo-${it.id}" }) { conteo ->
-                    ConteoPendienteCard(
-                        conteo = conteo,
-                        viewModel = viewModel,
-                        onMensaje = { msg -> scope.launch { snackbarHostState.showSnackbar(msg) } }
-                    )
-                }
-                items(productos, key = { it.id }) { producto ->
-                    val stockContado = conteoFisico[producto.id] ?: producto.stock
-                    val diferencia = stockContado - producto.stock
-
-                    ItemDiferenciaCard(
-                        producto = producto,
-                        stockContado = stockContado,
-                        diferencia = diferencia,
-                        onSumarContado = {
-                            viewModel.actualizarStockContado(producto.id, stockContado + 1)
-                        },
-                        onRestarContado = {
-                            viewModel.actualizarStockContado(producto.id, (stockContado - 1).coerceAtLeast(0))
-                        },
-                        onAplicarAjuste = {
-                            productoParaAjustar = producto
-                            stockContadoParaAjustar = stockContado
-                            motivoTexto = if (diferencia != 0) "Conteo físico: diferencia de $diferencia uds" else "Confirmación de inventario"
-                        }
-                    )
-                }
-            }
+    val nombreSucursal = sucursales.firstOrNull { it.id == (sucursalId ?: 1) }?.nombre ?: ""
+    val hora = fechaConteo?.let { SimpleDateFormat("dd/MM HH:mm", Locale.getDefault()).format(Date(it)) }
+    val bajoMinimo = productos.count { it.stock < it.stockMinimo }
+    val visibles = diferencias.filter {
+        when (filtro) {
+            "Faltantes" -> it.diferencia < 0
+            "Sobrantes" -> it.diferencia > 0
+            else -> true
         }
     }
 
-    // Diálogo de Confirmación de Ajuste
-    if (productoParaAjustar != null) {
-        val prod = productoParaAjustar!!
-        val dif = stockContadoParaAjustar - prod.stock
-
-        AlertDialog(
-            onDismissRequest = { productoParaAjustar = null },
-            title = { Text("Confirmar Ajuste de Stock") },
-            text = {
-                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Text("Producto: ${prod.nombre}", fontWeight = FontWeight.SemiBold)
-                    Text("Stock en Sistema: ${prod.stock} uds")
-                    Text("Stock Contado (Físico): $stockContadoParaAjustar uds", fontWeight = FontWeight.Bold)
+    Box(modifier = modifier.fillMaxSize().background(FondoPantalla)) {
+        LazyColumn(
+            modifier = Modifier.fillMaxSize().statusBarsPadding(),
+            contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 20.dp, vertical = 16.dp),
+            verticalArrangement = Arrangement.spacedBy(14.dp)
+        ) {
+            item {
+                Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    PastillaSucursal(nombreSucursal, onClick = onCambiarSucursal)
                     Text(
-                        text = if (dif == 0) "Sin variación" else if (dif > 0) "Sobrante de +$dif uds" else "Faltante de $dif uds",
-                        color = if (dif == 0) Exito else if (dif > 0) Azul else Peligro,
-                        fontWeight = FontWeight.Bold
+                        if (hora != null) "Último conteo $hora" else "Sin conteos enviados",
+                        fontSize = 15.sp, color = TextoSuave
                     )
-
-                    Spacer(modifier = Modifier.height(4.dp))
-                    OutlinedTextField(
-                        value = motivoTexto,
-                        onValueChange = { motivoTexto = it },
-                        label = { Text("Motivo del ajuste") },
-                        placeholder = { Text("Ej. Merma, Error de conteo, etc.") },
-                        singleLine = true,
-                        modifier = Modifier.fillMaxWidth()
-                    )
+                    Text("Diferencias", fontSize = 32.sp, fontWeight = FontWeight.ExtraBold, color = Texto)
                 }
-            },
-            confirmButton = {
-                Button(
-                    onClick = {
-                        viewModel.aplicarAjuste(
-                            producto = prod,
-                            stockContado = stockContadoParaAjustar,
-                            motivo = motivoTexto,
-                            onExito = {
-                                scope.launch {
-                                    snackbarHostState.showSnackbar("Stock de ${prod.nombre} actualizado a $stockContadoParaAjustar uds")
-                                }
-                                productoParaAjustar = null
-                            }
+            }
+            item {
+                Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                    Resumen("${diferencias.size}", "Con descalce", NaranjaFondo, NaranjaTexto, Modifier.weight(1f))
+                    Resumen("$bajoMinimo", "Bajo mínimo", RojoFondo, RojoTexto, Modifier.weight(1f))
+                }
+            }
+            item {
+                Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                    listOf("Todas", "Faltantes", "Sobrantes").forEach { nombre ->
+                        val elegido = filtro == nombre
+                        Text(
+                            text = nombre,
+                            fontSize = 15.sp,
+                            fontWeight = FontWeight.SemiBold,
+                            color = if (elegido) Color.White else Texto,
+                            modifier = Modifier
+                                .background(if (elegido) Texto else Color.White, RoundedCornerShape(24.dp))
+                                .border(BorderStroke(1.dp, Color(0xFFE2E8F0)), RoundedCornerShape(24.dp))
+                                .clickable { filtro = nombre }
+                                .padding(horizontal = 18.dp, vertical = 12.dp)
                         )
-                    },
-                    colors = ButtonDefaults.buttonColors(containerColor = Azul)
-                ) {
-                    Text("Guardar Ajuste")
+                    }
                 }
-            },
-            dismissButton = {
-                TextButton(onClick = { productoParaAjustar = null }) {
-                    Text("Cancelar")
+            }
+            if (visibles.isEmpty()) {
+                item {
+                    Text(
+                        if (diferencias.isEmpty()) "El último conteo no tiene diferencias." else "Sin diferencias en este filtro.",
+                        fontSize = 15.sp, color = TextoSuave
+                    )
+                }
+            }
+            items(visibles, key = { "dif-${it.productoId}" }) { d ->
+                TarjetaDiferencia(d, onReponer = { reponer = d })
+            }
+        }
+        SnackbarHost(snackbar, modifier = Modifier.align(Alignment.BottomCenter).padding(16.dp))
+    }
+
+    reponer?.let { d ->
+        val producto = productos.firstOrNull { it.id == d.productoId }
+        HojaReposicionView(
+            nombre = d.nombre,
+            sucursal = nombreSucursal,
+            stock = producto?.stock ?: d.contado,
+            minimo = d.minimo,
+            onCerrar = { reponer = null },
+            onEnviar = { cantidad, urgente, nota ->
+                viewModel.declararReposicion(d.productoId, cantidad, urgente, nota) {
+                    reponer = null
+                    scope.launch { snackbar.showSnackbar("Reposición enviada a gerencia · $cantidad uds") }
                 }
             }
         )
@@ -244,129 +161,52 @@ fun DiferenciasStockView(
 }
 
 @Composable
-private fun ItemDiferenciaCard(
-    producto: Producto,
-    stockContado: Int,
-    diferencia: Int,
-    onSumarContado: () -> Unit,
-    onRestarContado: () -> Unit,
-    onAplicarAjuste: () -> Unit
-) {
-    Card(
-        colors = CardDefaults.cardColors(containerColor = Superficie),
-        shape = RoundedCornerShape(16.dp),
-        modifier = Modifier.fillMaxWidth()
+private fun Resumen(valor: String, etiqueta: String, fondo: Color, color: Color, modifier: Modifier) {
+    Column(
+        modifier = modifier.background(fondo, RoundedCornerShape(22.dp)).padding(18.dp),
+        verticalArrangement = Arrangement.spacedBy(2.dp)
     ) {
-        Column(modifier = Modifier.padding(14.dp)) {
-            // Nombre y badge de diferencia
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.Top
-            ) {
-                Column(modifier = Modifier.weight(1f)) {
-                    Text(
-                        text = producto.nombre,
-                        fontWeight = FontWeight.Bold,
-                        fontSize = 15.sp,
-                        color = TextoPrincipal
-                    )
-                    Text(
-                        text = "Cat: ${producto.categoria} • Cód: ${producto.codigoBarras.ifBlank { "N/A" }}",
-                        fontSize = 12.sp,
-                        color = TextoSecundario
-                    )
-                }
+        Text(valor, fontSize = 36.sp, fontWeight = FontWeight.ExtraBold, color = color)
+        Text(etiqueta, fontSize = 16.sp, fontWeight = FontWeight.SemiBold, color = color)
+    }
+}
 
-                val (fondoDif, textoDif, labelDif) = when {
-                    diferencia == 0 -> Triple(ExitoSuave, Exito, "OK (0)")
-                    diferencia > 0 -> Triple(AzulSuave, AzulOscuro, "+$diferencia Sobrante")
-                    else -> Triple(PeligroSuave, Peligro, "$diferencia Faltante")
-                }
-
-                Box(
-                    modifier = Modifier
-                        .background(fondoDif, RoundedCornerShape(10.dp))
-                        .padding(horizontal = 8.dp, vertical = 4.dp)
-                ) {
-                    Text(
-                        text = labelDif,
-                        color = textoDif,
-                        fontWeight = FontWeight.Bold,
-                        fontSize = 12.sp
-                    )
-                }
-            }
-
-            Spacer(modifier = Modifier.height(12.dp))
-
-            // Filas de Stock Sistema vs Stock Contado
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                // Stock Sistema
-                Column {
-                    Text(text = "Sistema", fontSize = 11.sp, color = TextoSecundario)
-                    Text(
-                        text = "${producto.stock} uds",
-                        fontSize = 16.sp,
-                        fontWeight = FontWeight.SemiBold,
-                        color = TextoPrincipal
-                    )
-                }
-
-                // Control contador físico
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(6.dp)
-                ) {
-                    IconButton(
-                        onClick = onRestarContado,
-                        modifier = Modifier
-                            .size(34.dp)
-                            .background(GrisBarra.copy(alpha = 0.2f), RoundedCornerShape(8.dp))
-                    ) {
-                        Icon(Icons.Outlined.Remove, contentDescription = "Menos", modifier = Modifier.size(18.dp))
-                    }
-
-                    Box(
-                        modifier = Modifier
-                            .widthIn(min = 44.dp)
-                            .padding(horizontal = 4.dp),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Text(
-                            text = "$stockContado",
-                            fontSize = 17.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = if (diferencia != 0) Azul else TextoPrincipal
-                        )
-                    }
-
-                    IconButton(
-                        onClick = onSumarContado,
-                        modifier = Modifier
-                            .size(34.dp)
-                            .background(GrisBarra.copy(alpha = 0.2f), RoundedCornerShape(8.dp))
-                    ) {
-                        Icon(Icons.Outlined.Add, contentDescription = "Más", modifier = Modifier.size(18.dp))
-                    }
-                }
-
-                // Botón Conciliar
-                Button(
-                    onClick = onAplicarAjuste,
-                    shape = RoundedCornerShape(10.dp),
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = if (diferencia != 0) Azul else GrisBarra.copy(alpha = 0.6f)
-                    ),
-                    contentPadding = PaddingValues(horizontal = 10.dp, vertical = 4.dp)
-                ) {
-                    Text("Ajustar", fontSize = 12.sp)
-                }
-            }
+@Composable
+private fun TarjetaDiferencia(d: DiferenciaStock, onReponer: () -> Unit) {
+    val falta = d.diferencia < 0
+    Column(
+        modifier = Modifier.fillMaxWidth().background(Color.White, RoundedCornerShape(22.dp)).padding(16.dp),
+        verticalArrangement = Arrangement.spacedBy(12.dp)
+    ) {
+        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+            Text(d.nombre, fontSize = 18.sp, fontWeight = FontWeight.Bold, color = Texto, modifier = Modifier.weight(1f))
+            Text(
+                text = if (falta) "▼ −${-d.diferencia} uds" else "▲ +${d.diferencia} uds",
+                fontSize = 14.sp, fontWeight = FontWeight.Bold,
+                color = if (falta) NaranjaTexto else AzulTexto,
+                modifier = Modifier
+                    .background(if (falta) NaranjaFondo else AzulFondo, RoundedCornerShape(10.dp))
+                    .padding(horizontal = 10.dp, vertical = 6.dp)
+            )
         }
+        Row(modifier = Modifier.fillMaxWidth()) {
+            Dato("Registrado", "${d.registrado}", Texto, Modifier.weight(1f))
+            Dato("Contado", "${d.contado}", Texto, Modifier.weight(1f))
+            Dato("Mínimo", "${d.minimo}", if (d.contado < d.minimo) RojoTexto else Texto, Modifier.weight(1f))
+        }
+        if (falta) {
+            Box(
+                modifier = Modifier.fillMaxWidth().height(48.dp).background(Azul, RoundedCornerShape(24.dp)).clickable(onClick = onReponer),
+                contentAlignment = Alignment.Center
+            ) { Text("Declarar reposición", color = Color.White, fontSize = 16.sp, fontWeight = FontWeight.Bold) }
+        }
+    }
+}
+
+@Composable
+private fun Dato(etiqueta: String, valor: String, color: Color, modifier: Modifier) {
+    Column(modifier = modifier) {
+        Text(etiqueta, fontSize = 14.sp, color = TextoSuave)
+        Text(valor, fontSize = 20.sp, fontWeight = FontWeight.ExtraBold, color = color)
     }
 }

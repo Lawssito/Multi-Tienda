@@ -64,7 +64,7 @@ class ConteoViewModel(app: Application) : AndroidViewModel(app) {
                 // Crea el conteo y congela el stock de todos los productos, todo o nada
                 id = db.withTransaction {
                     val nuevo = dao.insertar(Conteo(sucursalId = sucursalId, fechaInicio = inicio)).toInt()
-                    dao.congelarStock(nuevo)
+                    dao.congelarStock(nuevo, sucursalId)
                     nuevo
                 }
             }

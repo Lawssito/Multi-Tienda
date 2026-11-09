@@ -5,7 +5,6 @@ import androidx.compose.ui.graphics.Color
 // Marca
 val Azul = Color(0xFF2563EB)
 val AzulOscuro = Color(0xFF1D4ED8)
-val AzulClaro = Color(0xFF3B82F6)
 val AzulSuave = Color(0xFFDBEAFE)
 
 // Texto

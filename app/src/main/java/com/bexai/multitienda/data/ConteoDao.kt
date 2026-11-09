@@ -6,6 +6,7 @@ import androidx.room.OnConflictStrategy
 import androidx.room.Query
 import com.bexai.multitienda.model.Conteo
 import com.bexai.multitienda.model.ConteoDetalle
+import com.bexai.multitienda.model.DescalceConteo
 import com.bexai.multitienda.model.EstadoConteo
 import com.bexai.multitienda.model.LineaConteo
 import kotlinx.coroutines.flow.Flow
@@ -28,9 +29,11 @@ interface ConteoDao {
     // Congela el stock de todos los productos al iniciar el conteo (contado queda en null)
     @Query("""
         INSERT INTO ConteoDetalle (conteoId, productoId, contado, sistema, actualizado)
-        SELECT :conteoId, id, NULL, stock, 0 FROM producto
+        SELECT :conteoId, p.id, NULL, COALESCE(s.cantidad, 0), 0
+        FROM producto p
+        LEFT JOIN StockSucursal s ON s.productoId = p.id AND s.sucursalId = :sucursalId
     """)
-    suspend fun congelarStock(conteoId: Int)
+    suspend fun congelarStock(conteoId: Int, sucursalId: Int)
 
     // Descartar: la línea vuelve a "sin contar", pero conserva su stock congelado
     @Query("""
@@ -60,6 +63,23 @@ interface ConteoDao {
     // Total de productos del conteo (los congelados al iniciar)
     @Query("SELECT COUNT(*) FROM ConteoDetalle WHERE conteoId = :conteoId")
     fun totalLineas(conteoId: Int): Flow<Int>
+
+    // Último conteo que el operador envió (aprobado, rechazado o aún pendiente) de la sucursal
+    @Query("SELECT * FROM Conteo WHERE sucursalId = :sucursalId AND estado != 'EN_CURSO' ORDER BY fechaEnvio DESC LIMIT 1")
+    fun ultimoEnviadoOAprobado(sucursalId: Int): Flow<Conteo?>
+
+    // Diferencias de todos los conteos ya enviados, de todas las sucursales (para Gerencia)
+    @Query("""
+        SELECT c.id AS conteoId, c.sucursalId AS sucursalId, d.productoId AS productoId, p.nombre AS nombre,
+               d.sistema AS sistema, d.contado AS contado, c.fechaEnvio AS fecha
+        FROM ConteoDetalle d
+        INNER JOIN Conteo c ON c.id = d.conteoId
+        INNER JOIN producto p ON p.id = d.productoId
+        WHERE c.estado != 'EN_CURSO' AND d.contado IS NOT NULL AND d.contado != d.sistema
+        ORDER BY c.fechaEnvio DESC
+        LIMIT 100
+    """)
+    fun descalces(): Flow<List<DescalceConteo>>
 
     @Query("SELECT * FROM Conteo WHERE id = :id")
     suspend fun buscar(id: Int): Conteo?

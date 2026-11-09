@@ -5,6 +5,8 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.room.withTransaction
 import com.bexai.multitienda.data.AppDatabase
+import com.bexai.multitienda.data.ExistenciasRepository
+import com.bexai.multitienda.data.RecepcionRepository
 import com.bexai.multitienda.data.SesionSucursal
 import com.bexai.multitienda.model.ConteoDetalle
 import com.bexai.multitienda.model.Movimiento
@@ -30,7 +32,9 @@ data class UltimaLectura(
     val movimientoId: Int,          // en modo Conteo no se usa (0)
     val motivo: String? = null,
     val esConteo: Boolean = false,  // en conteo, cantidad = contado y stockAntes = sistema
-    val baseConteo: Int = 0         // contado que había antes de esta tanda de lecturas
+    val baseConteo: Int = 0,        // contado que había antes de esta tanda de lecturas
+    val detalleRecepcion: String? = null, // en recepción de caja: "Recibidas 24 de 24"
+    val recepcionId: Int = 0              // recepción en curso (solo en recepción de caja)
 )
 
 /** Datos de la hoja inferior (Cambiar cantidad o Ajuste). */
@@ -44,7 +48,19 @@ data class HojaCantidad(
     val motivoInicial: String = "",
     val movimientoId: Int? = null, // si ya existe, la hoja lo edita en vez de crear otro
     val esConteo: Boolean = false, // edita lo contado de un producto en el conteo en curso
-    val baseConteo: Int = 0        // a esto vuelve lo contado si se descarta
+    val baseConteo: Int = 0,       // a esto vuelve lo contado (o lo recibido) si se descarta
+    val esRecepcion: Boolean = false, // edita lo recibido de un producto en la recepción de una caja
+    val recepcionId: Int = 0
+)
+
+/** Caja (despacho) detectada al leer su QR en Entrada. */
+data class CajaDetectada(
+    val despachoId: Int,
+    val codigo: String,
+    val proveedor: String,
+    val guia: String,
+    val productos: Int,
+    val unidades: Int
 )
 
 data class EscanerUiState(
@@ -53,13 +69,16 @@ data class EscanerUiState(
     val mensaje: String? = null,
     val hoja: HojaCantidad? = null,
     val manualAbierto: Boolean = false,   // hoja "Código manual"
-    val errorManual: String? = null
+    val errorManual: String? = null,
+    val caja: CajaDetectada? = null       // hoja "Caja detectada"
 )
 
 class EscanerViewModel(app: Application) : AndroidViewModel(app) {
 
     private val db = AppDatabase.obtener(app)
-    private val sucursalId: Int get() = SesionSucursal.id   // la que eligió el operador
+    private val sucursalId: Int get() = SesionSucursal.id
+    private val existencias = ExistenciasRepository(db)   // la que eligió el operador
+    private val recepcionRepo = RecepcionRepository(db)
 
     private val _uiState = MutableStateFlow(EscanerUiState())
     val uiState: StateFlow<EscanerUiState> = _uiState.asStateFlow()
@@ -80,30 +99,164 @@ class EscanerViewModel(app: Application) : AndroidViewModel(app) {
      * Si el producto no existe, el error queda en el campo y la hoja sigue abierta.
      * Si existe, se cierra la hoja y el código se procesa igual que uno escaneado.
      */
-    fun buscarCodigoManual(codigo: String, tipo: TipoMovimiento, esConteo: Boolean) {
+    fun buscarCodigoManual(codigo: String, tipo: TipoMovimiento, esConteo: Boolean, recepcionId: Int = 0, soloCaja: Boolean = false) {
         viewModelScope.launch {
-            if (db.productoDao().buscarPorCodigo(codigo) == null) {
-                _uiState.update { it.copy(errorManual = "No existe un producto con ese código") }
+            // En Entrada (fuera de una recepción) también se acepta el código de un despacho
+            val esDespacho = recepcionId == 0 && !esConteo && tipo == TipoMovimiento.ENTRADA &&
+                db.despachoDao().buscarPorCodigo(codigo.trim()) != null
+            if (!esDespacho && soloCaja) {
+                _uiState.update { it.copy(errorManual = "No existe una caja con ese código") }
+                return@launch
+            }
+            if (!esDespacho && db.productoDao().buscarPorCodigo(codigo) == null) {
+                _uiState.update {
+                    it.copy(
+                        errorManual = if (codigo.trim().startsWith("DSP-", ignoreCase = true)) {
+                            "No existe una caja con ese código"
+                        } else {
+                            "No existe un producto con ese código"
+                        }
+                    )
+                }
                 return@launch
             }
             _uiState.update { it.copy(manualAbierto = false, errorManual = null) }
-            procesarCodigo(codigo, tipo, esConteo)
+            procesarCodigo(codigo, tipo, esConteo, recepcionId, soloCaja)
         }
     }
 
-    fun procesarCodigo(codigo: String, tipo: TipoMovimiento, esConteo: Boolean) {
-        if (_uiState.value.hoja != null) return   // con la hoja abierta no se leen códigos
-        if (esConteo) {
-            contarProducto(codigo)
-            return
-        }
+    // ---------- Entrada por caja: el QR de un despacho abre "Caja detectada" ----------
 
+    fun cerrarCaja() = _uiState.update { it.copy(caja = null) }
+
+    private suspend fun detectarCaja(codigo: String): Boolean {
+        val despacho = db.despachoDao().buscarPorCodigo(codigo.trim())
+        if (despacho == null) {
+            // Un código con forma de despacho que no existe es un QR desconocido
+            if (codigo.trim().startsWith("DSP-", ignoreCase = true)) {
+                avisar("QR de caja desconocido: ${codigo.trim()}")
+                return true
+            }
+            return false
+        }
+        val resumen = db.despachoDao().resumen(despacho.id)
+        _uiState.update {
+            it.copy(
+                mensaje = null,
+                caja = CajaDetectada(
+                    despachoId = despacho.id,
+                    codigo = despacho.codigo,
+                    proveedor = despacho.proveedor,
+                    guia = despacho.guia,
+                    productos = resumen.productos,
+                    unidades = resumen.unidades
+                )
+            )
+        }
+        return true
+    }
+
+    // ---------- Recepción de caja: cada lectura suma 1 recibida, NO toca el stock ----------
+
+    private fun recibirProducto(codigo: String, recepcionId: Int) {
         viewModelScope.launch {
             val producto = db.productoDao().buscarPorCodigo(codigo)
             if (producto == null) {
                 avisar("Producto no encontrado: $codigo")
                 return@launch
             }
+            val lectura = recepcionRepo.recibir(recepcionId, producto)
+            if (lectura == null) {
+                avisar("Esta recepción ya fue enviada")
+                return@launch
+            }
+            val linea = lectura.linea
+            // Una "tanda" son las lecturas seguidas del mismo producto. Descartar deshace solo la tanda.
+            val anterior = _uiState.value.ultima
+            val base = if (anterior != null && anterior.detalleRecepcion != null && anterior.productoId == producto.id) {
+                anterior.baseConteo
+            } else {
+                linea.recibido - 1
+            }
+            _uiState.update {
+                it.copy(
+                    lecturas = it.lecturas + 1,
+                    ultima = UltimaLectura(
+                        productoId = producto.id,
+                        nombre = producto.nombre,
+                        tipo = TipoMovimiento.ENTRADA,
+                        cantidad = linea.recibido,
+                        stockAntes = linea.esperado,   // en recepción, "antes" = lo esperado
+                        stockDespues = linea.recibido,
+                        movimientoId = 0,
+                        baseConteo = base,
+                        recepcionId = recepcionId,
+                        detalleRecepcion = textoRecepcion(linea.recibido, linea.esperado)
+                    ),
+                    mensaje = if (lectura.noEsperado) "${producto.nombre} no venía en esta caja" else null
+                )
+            }
+        }
+    }
+
+    private fun textoRecepcion(recibido: Int, esperado: Int) =
+        if (esperado == 0) "Fuera del despacho · cuenta como sobrante" else "Recibidas $recibido de $esperado"
+
+    private suspend fun guardarRecepcion(hoja: HojaCantidad, recibido: Int) {
+        if (!recepcionRepo.fijarRecibido(hoja.recepcionId, hoja.productoId, recibido)) {
+            avisar("Esta recepción ya fue enviada")
+            _uiState.update { it.copy(hoja = null) }
+            return
+        }
+        _uiState.update {
+            it.copy(
+                ultima = it.ultima?.copy(
+                    cantidad = recibido,
+                    stockDespues = recibido,
+                    detalleRecepcion = textoRecepcion(recibido, hoja.stockBase)
+                ),
+                hoja = null
+            )
+        }
+    }
+
+    private suspend fun descartarRecepcion(hoja: HojaCantidad) {
+        recepcionRepo.fijarRecibido(hoja.recepcionId, hoja.productoId, hoja.baseConteo)
+        _uiState.update {
+            it.copy(
+                lecturas = (it.lecturas - (hoja.cantidadInicial - hoja.baseConteo).coerceAtLeast(0)).coerceAtLeast(0),
+                ultima = null,
+                hoja = null
+            )
+        }
+    }
+
+    fun procesarCodigo(codigo: String, tipo: TipoMovimiento, esConteo: Boolean, recepcionId: Int = 0, soloCaja: Boolean = false) {
+        if (_uiState.value.hoja != null || _uiState.value.caja != null) return   // con una hoja abierta no se leen códigos
+        if (recepcionId > 0) {
+            recibirProducto(codigo, recepcionId)
+            return
+        }
+        if (esConteo) {
+            contarProducto(codigo)
+            return
+        }
+
+        viewModelScope.launch {
+            if (tipo == TipoMovimiento.ENTRADA && detectarCaja(codigo)) return@launch
+            if (soloCaja) {
+                avisar("Modo Caja: escanea el QR de la caja (DSP-0042)")
+                return@launch
+            }
+
+            val producto = db.productoDao().buscarPorCodigo(codigo)
+            if (producto == null) {
+                avisar("Producto no encontrado: $codigo")
+                return@launch
+            }
+
+            // Stock de ESTA sucursal (el total global vive en Producto.stock)
+            val stockSucursal = existencias.cantidad(producto.id, sucursalId)
 
             // Ajuste: se abre la hoja para escribir el total real y el motivo
             if (tipo == TipoMovimiento.AJUSTE) {
@@ -115,8 +268,8 @@ class EscanerViewModel(app: Application) : AndroidViewModel(app) {
                             productoId = producto.id,
                             nombre = producto.nombre,
                             tipo = tipo,
-                            stockBase = producto.stock,
-                            cantidadInicial = producto.stock
+                            stockBase = stockSucursal,
+                            cantidadInicial = stockSucursal
                         )
                     )
                 }
@@ -125,11 +278,11 @@ class EscanerViewModel(app: Application) : AndroidViewModel(app) {
 
             // Entrada / Salida: cada lectura mueve 1 unidad
             val delta = if (tipo == TipoMovimiento.ENTRADA) 1 else -1
-            if (producto.stock + delta < 0) {
+            if (stockSucursal + delta < 0) {
                 avisar("Sin stock de ${producto.nombre}")
                 return@launch
             }
-            val stockNuevo = producto.stock + delta
+            val stockNuevo = stockSucursal + delta
 
             val previa = _uiState.value.ultima
             val ultima = if (previa != null && previa.productoId == producto.id && previa.tipo == tipo) {
@@ -137,7 +290,7 @@ class EscanerViewModel(app: Application) : AndroidViewModel(app) {
                 val cantidad = previa.cantidad + 1
                 db.withTransaction {
                     db.movimientoDao().actualizarCantidad(previa.movimientoId, cantidad)
-                    db.productoDao().sumarStock(producto.id, delta)
+                    existencias.sumar(producto.id, sucursalId, delta)
                 }
                 previa.copy(cantidad = cantidad, stockDespues = stockNuevo)
             } else {
@@ -151,7 +304,7 @@ class EscanerViewModel(app: Application) : AndroidViewModel(app) {
                             fechaHora = System.currentTimeMillis()
                         )
                     ).toInt()
-                    db.productoDao().sumarStock(producto.id, delta)
+                    existencias.sumar(producto.id, sucursalId, delta)
                     id
                 }
                 UltimaLectura(
@@ -159,7 +312,7 @@ class EscanerViewModel(app: Application) : AndroidViewModel(app) {
                     nombre = producto.nombre,
                     tipo = tipo,
                     cantidad = 1,
-                    stockAntes = producto.stock,
+                    stockAntes = stockSucursal,
                     stockDespues = stockNuevo,
                     movimientoId = movimientoId
                 )
@@ -186,7 +339,9 @@ class EscanerViewModel(app: Application) : AndroidViewModel(app) {
                     motivoInicial = ultima.motivo ?: "",
                     movimientoId = ultima.movimientoId,
                     esConteo = ultima.esConteo,
-                    baseConteo = ultima.baseConteo
+                    baseConteo = ultima.baseConteo,
+                    esRecepcion = ultima.detalleRecepcion != null,
+                    recepcionId = ultima.recepcionId
                 )
             )
         }
@@ -198,6 +353,7 @@ class EscanerViewModel(app: Application) : AndroidViewModel(app) {
         val hoja = _uiState.value.hoja ?: return
         viewModelScope.launch {
             when {
+                hoja.esRecepcion -> guardarRecepcion(hoja, cantidad)
                 hoja.esConteo -> guardarConteo(hoja, cantidad)
                 hoja.esAjuste -> guardarAjuste(hoja, cantidad, motivo.trim())
                 else -> guardarCambioCantidad(hoja, cantidad)
@@ -212,6 +368,10 @@ class EscanerViewModel(app: Application) : AndroidViewModel(app) {
     fun descartarHoja() {
         val hoja = _uiState.value.hoja ?: return
         viewModelScope.launch {
+            if (hoja.esRecepcion) {
+                descartarRecepcion(hoja)
+                return@launch
+            }
             if (hoja.esConteo) {
                 descartarLineaConteo(hoja)
                 return@launch
@@ -220,7 +380,7 @@ class EscanerViewModel(app: Application) : AndroidViewModel(app) {
             if (movimientoId != null) {
                 db.withTransaction {
                     db.movimientoDao().eliminar(movimientoId)
-                    db.productoDao().fijarStock(hoja.productoId, hoja.stockBase)
+                    existencias.fijar(hoja.productoId, sucursalId, hoja.stockBase)
                 }
             }
             _uiState.update {
@@ -261,7 +421,7 @@ class EscanerViewModel(app: Application) : AndroidViewModel(app) {
             // Si la línea está marcada para recontar, el primer escaneo reemplaza el valor anterior
             val recontando = previo?.actualizado == ConteoDetalle.RECONTAR
             val contado = (if (recontando) 0 else previo?.contado ?: 0) + 1
-            val sistema = previo?.sistema ?: producto.stock
+            val sistema = previo?.sistema ?: existencias.cantidad(producto.id, sucursalId)
             // Una "tanda" son las lecturas seguidas del mismo producto. Descartar deshace solo la tanda.
             val anterior = _uiState.value.ultima
             val base = if (anterior != null && anterior.esConteo && anterior.productoId == producto.id) {
@@ -347,7 +507,7 @@ class EscanerViewModel(app: Application) : AndroidViewModel(app) {
 
         db.withTransaction {
             db.movimientoDao().actualizarCantidad(movimientoId, cantidad)
-            db.productoDao().fijarStock(hoja.productoId, stockNuevo)
+            existencias.fijar(hoja.productoId, sucursalId, stockNuevo)
         }
         _uiState.update {
             it.copy(
@@ -376,7 +536,7 @@ class EscanerViewModel(app: Application) : AndroidViewModel(app) {
                 db.movimientoDao().actualizarAjuste(hoja.movimientoId, total, motivo)
                 hoja.movimientoId
             }
-            db.productoDao().fijarStock(hoja.productoId, total)
+            existencias.fijar(hoja.productoId, sucursalId, total)
             id
         }
         _uiState.update {

@@ -46,6 +46,7 @@ import com.bexai.multitienda.ui.theme.TextoSecundario
 
 private const val MINIMO_DIGITOS = 8
 private const val MAXIMO_DIGITOS = 13
+private const val MAXIMO_CAJA = 20
 
 /**
  * Hoja para escribir un código de barras a mano.
@@ -56,12 +57,14 @@ private const val MAXIMO_DIGITOS = 13
 @Composable
 fun HojaCodigoManualView(
     error: String?,
+    permiteCaja: Boolean,   // en Entrada también se acepta el código de una caja (DSP-0042)
     onCerrar: () -> Unit,
     onBuscar: (String) -> Unit,
     onEditar: () -> Unit
 ) {
     var texto by remember { mutableStateOf("") }
-    val valido = texto.length in MINIMO_DIGITOS..MAXIMO_DIGITOS
+    val esCodigoCaja = permiteCaja && Regex("[A-Za-z]{2,5}-?[0-9]{2,10}").matches(texto)
+    val valido = texto.length in MINIMO_DIGITOS..MAXIMO_DIGITOS && texto.all { it.isDigit() } || esCodigoCaja
 
     ModalBottomSheet(
         onDismissRequest = onCerrar,
@@ -94,22 +97,36 @@ fun HojaCodigoManualView(
                 ) { Icon(Icons.Default.Close, contentDescription = "Cerrar", tint = TextoPrincipal) }
             }
 
-            Text("Escribe el código de barras del producto.", color = TextoSecundario)
+            Text(
+                if (permiteCaja) "Escribe el código de barras del producto o el código de la caja (DSP-0042)."
+                else "Escribe el código de barras del producto.",
+                color = TextoSecundario
+            )
 
             OutlinedTextField(
                 value = texto,
                 onValueChange = {
-                    texto = it.filter { c -> c.isDigit() }.take(MAXIMO_DIGITOS)
+                    texto = if (permiteCaja) {
+                        it.filter { c -> c.isLetterOrDigit() || c == '-' }.take(MAXIMO_CAJA)
+                    } else {
+                        it.filter { c -> c.isDigit() }.take(MAXIMO_DIGITOS)
+                    }
                     onEditar()   // al escribir, desaparece el error del producto no encontrado
                 },
                 modifier = Modifier.fillMaxWidth(),
                 singleLine = true,
                 isError = error != null,
-                placeholder = { Text("Ej.: 7800000000016") },
+                placeholder = { Text(if (permiteCaja) "Ej.: 7800000000016 o DSP-0042" else "Ej.: 7800000000016") },
                 supportingText = {
-                    Text(error ?: "Solo dígitos, de $MINIMO_DIGITOS a $MAXIMO_DIGITOS caracteres (${texto.length}/$MAXIMO_DIGITOS)")
+                    Text(
+                        error ?: if (permiteCaja) {
+                            "Producto: $MINIMO_DIGITOS a $MAXIMO_DIGITOS dígitos. Caja: letras y número, como DSP-0042."
+                        } else {
+                            "Solo dígitos, de $MINIMO_DIGITOS a $MAXIMO_DIGITOS caracteres (${texto.length}/$MAXIMO_DIGITOS)"
+                        }
+                    )
                 },
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number, imeAction = ImeAction.Done),
+                keyboardOptions = KeyboardOptions(keyboardType = if (permiteCaja) KeyboardType.Text else KeyboardType.Number, imeAction = ImeAction.Done),
                 keyboardActions = KeyboardActions(onDone = { if (valido) onBuscar(texto) }),
                 shape = RoundedCornerShape(20.dp)
             )
@@ -120,7 +137,7 @@ fun HojaCodigoManualView(
                 modifier = Modifier.fillMaxWidth().height(56.dp),
                 shape = RoundedCornerShape(20.dp),
                 colors = ButtonDefaults.buttonColors(containerColor = Azul)
-            ) { Text("Buscar producto", fontSize = 18.sp, fontWeight = FontWeight.Bold) }
+            ) { Text(if (esCodigoCaja) "Buscar caja" else "Buscar producto", fontSize = 18.sp, fontWeight = FontWeight.Bold) }
         }
     }
 }

@@ -20,5 +20,6 @@ data class Producto(
     val nombre: String, // Nombre del producto
     val stock: Int, // Unidades disponibles
     val codigoBarras: String = "",
-    val categoria : String = ""
+    val categoria : String = "",
+    val stockMinimo: Int = 10   // bajo este stock el producto está "bajo mínimo"
 )
