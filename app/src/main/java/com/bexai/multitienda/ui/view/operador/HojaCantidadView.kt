@@ -99,7 +99,8 @@ fun HojaCantidadView(
     val cantidad = texto.toIntOrNull() ?: 0
     val signo = if (hoja.tipo == TipoMovimiento.ENTRADA) 1 else -1
     val esSalida = !hoja.esAjuste && hoja.tipo == TipoMovimiento.SALIDA
-    val minimo = if (hoja.esAjuste || hoja.esConteo) 0 else 1
+    val usaDiferencia = hoja.esConteo || hoja.esRecepcion   // se compara con lo del sistema / lo esperado
+    val minimo = if (hoja.esAjuste || usaDiferencia) 0 else 1
     val maximo = if (esSalida) hoja.stockBase else 9999
     val cantidadValida = texto.isNotEmpty() && cantidad in minimo..maximo
     val motivoValido = !hoja.esAjuste || motivo.isNotEmpty()
@@ -112,6 +113,7 @@ fun HojaCantidadView(
     }
 
     val titulo = when {
+        hoja.esRecepcion -> "Recepción: cuántas llegaron"
         hoja.esConteo -> "Conteo: escribe lo contado"
         hoja.esAjuste -> "Ajuste: escribe el total real"
         hoja.tipo == TipoMovimiento.ENTRADA -> "Cambiar cantidad · Entrada"
@@ -161,6 +163,7 @@ fun HojaCantidadView(
                     Text(hoja.nombre, fontSize = 18.sp, fontWeight = FontWeight.Bold, color = TextoPrincipal)
                     Text(
                         when {
+                            hoja.esRecepcion -> "Esperadas ${hoja.stockBase}"
                             hoja.esConteo -> "Sistema ${hoja.stockBase}"
                             hoja.esAjuste -> "Stock actual ${hoja.stockBase}"
                             else -> "Stock inicial ${hoja.stockBase}"
@@ -225,6 +228,7 @@ fun HojaCantidadView(
             ) {
                 Text(
                     when {
+                        hoja.esRecepcion -> "Recibidas"
                         hoja.esConteo -> "Contado"
                         hoja.esAjuste -> "Nuevo total"
                         else -> "Stock resultante"
@@ -232,7 +236,7 @@ fun HojaCantidadView(
                     color = AzulOscuro, fontWeight = FontWeight.Bold
                 )
                 Text(
-                    if (hoja.esConteo) "${hoja.stockBase} → $cantidad ($textoDiferencia)"
+                    if (usaDiferencia) "${hoja.stockBase} → $cantidad ($textoDiferencia)"
                     else "${hoja.stockBase} → $resultado",
                     color = AzulOscuro, fontWeight = FontWeight.Bold
                 )

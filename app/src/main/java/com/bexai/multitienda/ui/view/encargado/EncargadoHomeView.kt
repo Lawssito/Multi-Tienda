@@ -1,382 +1,218 @@
 package com.bexai.multitienda.ui.view.encargado
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
+import kotlinx.coroutines.launch
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.outlined.CompareArrows
-import androidx.compose.material.icons.automirrored.outlined.Logout
-import androidx.compose.material.icons.outlined.*
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import androidx.compose.material.icons.outlined.Search
+import androidx.compose.material3.Icon
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
-import androidx.navigation.NavHostController
-import com.bexai.multitienda.model.Producto
-import com.bexai.multitienda.ui.navigation.Ruta
-import com.bexai.multitienda.ui.theme.*
+import com.bexai.multitienda.ui.components.PastillaSucursal
+import com.bexai.multitienda.ui.theme.Azul
 import com.bexai.multitienda.viewmodel.EncargadoViewModel
 
+// Colores del mockup v6 (Stock.dc.html)
+private val FondoPantalla = Color(0xFFF4F6FA)
+private val Texto = Color(0xFF0F172A)
+private val TextoSuave = Color(0xFF5B6474)
+private val Rojo = Color(0xFFDC2626)
+private val RojoTexto = Color(0xFFB91C1C)
+private val Pista = Color(0xFFE9EDF3)
+
 /**
- * EncargadoHomeView: consulta y exploración de stock en bodega en tiempo real.
+ * Stock de la sucursal (mockup "Stock"): buscador, filtros Todos, Quiebre, Bajo stock y Normal,
+ * y una lista con barra de nivel por producto. Al tocar un producto se abre "Declarar reposición".
  */
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun EncargadoHomeView(
-    navController: NavHostController,
+    modifier: Modifier = Modifier,
+    onCambiarSucursal: () -> Unit = {},
     viewModel: EncargadoViewModel = viewModel()
 ) {
     val productos by viewModel.productosFiltrados.collectAsState()
-    val todosLosProductos by viewModel.productos.collectAsState()
+    val todos by viewModel.productos.collectAsState()
     val sucursales by viewModel.sucursales.collectAsState()
     val sucursalId by viewModel.sucursalSeleccionadaId.collectAsState()
-
     val query by viewModel.query.collectAsState()
-    val categoriaFiltro by viewModel.categoriaFiltro.collectAsState()
-    val estadoFiltro by viewModel.estadoFiltro.collectAsState()
+    val estado by viewModel.estadoFiltro.collectAsState()
 
-    var menuSucursalAbierto by remember { mutableStateOf(false) }
-    val sucursalActual = sucursales.find { it.id == sucursalId } ?: sucursales.firstOrNull()
-
-    val quiebresCount = todosLosProductos.count { it.stock == 0 }
-    val bajoStockCount = todosLosProductos.count { it.stock in 1..9 }
+    val nombreSucursal = sucursales.firstOrNull { it.id == (sucursalId ?: 1) }?.nombre ?: ""
+    val quiebre = todos.count { it.stock <= 0 }
+    val bajoStock = todos.count { it.stock > 0 && it.stock < it.stockMinimo }
+    val normal = todos.count { it.stock >= it.stockMinimo }
+    val maximo = (todos.maxOfOrNull { it.stock } ?: 1).coerceAtLeast(1)
+    var reponer by remember { mutableStateOf<com.bexai.multitienda.model.Producto?>(null) }
+    val snackbar = remember { androidx.compose.material3.SnackbarHostState() }
+    val scope = androidx.compose.runtime.rememberCoroutineScope()
 
     Column(
-        modifier = Modifier
+        modifier = modifier
             .fillMaxSize()
-            .background(MaterialTheme.colorScheme.background)
+            .background(FondoPantalla)
             .statusBarsPadding()
-            .padding(horizontal = 16.dp, vertical = 12.dp)
+            .padding(horizontal = 20.dp, vertical = 16.dp),
+        verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
-        // Encabezado superior con Logout
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Column {
-                Text(
-                    text = "Stock de Bodega",
-                    style = MaterialTheme.typography.headlineSmall,
-                    fontWeight = FontWeight.Bold,
-                    color = TextoPrincipal
-                )
-                Text(
-                    text = "Consulta y supervisión de existencias",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = TextoSecundario
-                )
-            }
-
-            IconButton(
-                onClick = {
-                    navController.navigate(Ruta.Login.ruta) {
-                        popUpTo(0) { inclusive = true }
-                    }
-                }
-            ) {
-                Icon(
-                    imageVector = Icons.AutoMirrored.Outlined.Logout,
-                    contentDescription = "Cerrar sesión",
-                    tint = Peligro
-                )
-            }
+            PastillaSucursal(nombreSucursal, onClick = onCambiarSucursal)
+            Text("Encargado", fontSize = 15.sp, color = TextoSuave)
         }
 
-        Spacer(modifier = Modifier.height(10.dp))
+        Text("Stock", fontSize = 32.sp, fontWeight = FontWeight.ExtraBold, color = Texto)
 
-        // Selector de Sucursal
-        Card(
-            colors = CardDefaults.cardColors(containerColor = Superficie),
-            shape = RoundedCornerShape(14.dp),
-            modifier = Modifier
-                .fillMaxWidth()
-                .clickable { menuSucursalAbierto = true }
-        ) {
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 14.dp, vertical = 10.dp),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.SpaceBetween
-            ) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(Icons.Outlined.Store, contentDescription = null, tint = Azul)
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Column {
-                        Text(
-                            text = sucursalActual?.nombre ?: "Seleccionar Sucursal",
-                            fontWeight = FontWeight.SemiBold,
-                            fontSize = 14.sp
-                        )
-                        Text(
-                            text = sucursalActual?.direccion ?: "Dirección de bodega",
-                            fontSize = 12.sp,
-                            color = TextoSecundario
-                        )
-                    }
-                }
-                Icon(Icons.Outlined.ArrowDropDown, contentDescription = null)
-            }
-
-            DropdownMenu(
-                expanded = menuSucursalAbierto,
-                onDismissRequest = { menuSucursalAbierto = false }
-            ) {
-                sucursales.forEach { suc ->
-                    DropdownMenuItem(
-                        text = { Text(suc.nombre + if (!suc.activa) " (Inactiva)" else "") },
-                        onClick = {
-                            viewModel.onSucursalChange(suc.id)
-                            menuSucursalAbierto = false
-                        }
-                    )
-                }
-            }
-        }
-
-        Spacer(modifier = Modifier.height(12.dp))
-
-        // Tarjetas métricas rápidas
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
-            MetricCard(
-                titulo = "Total Items",
-                valor = "${todosLosProductos.size}",
-                colorFondo = AzulSuave,
-                colorTexto = AzulOscuro,
-                modifier = Modifier.weight(1f)
-            )
-            MetricCard(
-                titulo = "En Quiebre",
-                valor = "$quiebresCount",
-                colorFondo = PeligroSuave,
-                colorTexto = Peligro,
-                modifier = Modifier.weight(1f)
-            )
-            MetricCard(
-                titulo = "Bajo Stock",
-                valor = "$bajoStockCount",
-                colorFondo = AdvertenciaSuave,
-                colorTexto = Advertencia,
-                modifier = Modifier.weight(1f)
-            )
-        }
-
-        Spacer(modifier = Modifier.height(12.dp))
-
-        // Barra de Búsqueda
-        OutlinedTextField(
-            value = query,
-            onValueChange = viewModel::onQueryChange,
-            placeholder = { Text("Buscar por nombre, código o categoría...") },
-            leadingIcon = { Icon(Icons.Outlined.Search, contentDescription = null) },
-            trailingIcon = {
-                if (query.isNotEmpty()) {
-                    IconButton(onClick = { viewModel.onQueryChange("") }) {
-                        Icon(Icons.Outlined.Clear, contentDescription = "Limpiar")
-                    }
-                }
-            },
-            singleLine = true,
-            shape = RoundedCornerShape(16.dp),
-            colors = OutlinedTextFieldDefaults.colors(
-                focusedContainerColor = Superficie,
-                unfocusedContainerColor = Superficie
-            ),
-            modifier = Modifier.fillMaxWidth()
-        )
-
-        Spacer(modifier = Modifier.height(8.dp))
-
-        // Filtro por Estado
+        // Buscador
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .horizontalScroll(rememberScrollState()),
-            horizontalArrangement = Arrangement.spacedBy(6.dp)
+                .height(52.dp)
+                .background(Color.White, RoundedCornerShape(16.dp))
+                .border(BorderStroke(1.5.dp, Color(0xFFE2E8F0)), RoundedCornerShape(16.dp))
+                .padding(horizontal = 16.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(10.dp)
         ) {
-            listOf("Todos", "Quiebre", "Bajo Stock", "Normal").forEach { est ->
-                FilterChip(
-                    selected = estadoFiltro == est,
-                    onClick = { viewModel.onEstadoFiltroChange(est) },
-                    label = { Text(est, fontSize = 12.sp) }
+            Icon(Icons.Outlined.Search, contentDescription = null, tint = TextoSuave, modifier = Modifier.size(20.dp))
+            Box(modifier = Modifier.weight(1f)) {
+                if (query.isEmpty()) Text("Buscar producto o código", fontSize = 15.sp, color = TextoSuave)
+                BasicTextField(
+                    value = query,
+                    onValueChange = viewModel::onQueryChange,
+                    singleLine = true,
+                    textStyle = TextStyle(fontSize = 15.sp, color = Texto),
+                    modifier = Modifier.fillMaxWidth()
                 )
             }
         }
 
-        Spacer(modifier = Modifier.height(6.dp))
+        // Filtros
+        Row(
+            modifier = Modifier.horizontalScroll(rememberScrollState()),
+            horizontalArrangement = Arrangement.spacedBy(10.dp)
+        ) {
+            Filtro("Todos ${todos.size}", seleccionado = estado == "Todos") {
+                viewModel.onEstadoFiltroChange("Todos")
+            }
+            Filtro("Quiebre $quiebre", seleccionado = estado == "Quiebre") {
+                viewModel.onEstadoFiltroChange(if (estado == "Quiebre") "Todos" else "Quiebre")
+            }
+            Filtro("Bajo stock $bajoStock", seleccionado = estado == "Bajo stock") {
+                viewModel.onEstadoFiltroChange(if (estado == "Bajo stock") "Todos" else "Bajo stock")
+            }
+            Filtro("Normal $normal", seleccionado = estado == "Normal") {
+                viewModel.onEstadoFiltroChange(if (estado == "Normal") "Todos" else "Normal")
+            }
+        }
 
-        // Lista de Productos
         if (productos.isEmpty()) {
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .weight(1f),
-                contentAlignment = Alignment.Center
-            ) {
-                Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    Icon(
-                        Icons.Outlined.Inventory2,
-                        contentDescription = null,
-                        tint = TextoSecundario,
-                        modifier = Modifier.size(48.dp)
-                    )
-                    Spacer(modifier = Modifier.height(8.dp))
-                    Text(
-                        text = "No se encontraron productos coincidentes",
-                        color = TextoSecundario,
-                        fontSize = 14.sp
-                    )
-                }
-            }
-        } else {
-            LazyColumn(
-                modifier = Modifier.weight(1f),
-                verticalArrangement = Arrangement.spacedBy(8.dp),
-                contentPadding = PaddingValues(bottom = 80.dp)
-            ) {
-                items(productos, key = { it.id }) { producto ->
-                    ProductoBodegaCard(
-                        producto = producto,
-                        onReportarDiferencia = {
-                            navController.navigate(Ruta.EncargadoDiferencias.ruta)
-                        },
-                        onDeclararAlerta = {
-                            navController.navigate(Ruta.EncargadoAlertasReposicion.ruta)
-                        }
-                    )
-                }
-            }
+            Text("No hay productos que coincidan", fontSize = 15.sp, color = TextoSuave)
         }
-    }
-}
-
-@Composable
-private fun MetricCard(
-    titulo: String,
-    valor: String,
-    colorFondo: Color,
-    colorTexto: Color,
-    modifier: Modifier = Modifier
-) {
-    Card(
-        colors = CardDefaults.cardColors(containerColor = colorFondo),
-        shape = RoundedCornerShape(12.dp),
-        modifier = modifier
-    ) {
-        Column(
-            modifier = Modifier.padding(vertical = 8.dp, horizontal = 10.dp),
-            horizontalAlignment = Alignment.CenterHorizontally
+        LazyColumn(
+            modifier = Modifier
+                .weight(1f)
+                .fillMaxWidth()
+                .clip(RoundedCornerShape(22.dp))
+                .background(Color.White)
         ) {
-            Text(text = valor, fontSize = 18.sp, fontWeight = FontWeight.Bold, color = colorTexto)
-            Text(text = titulo, fontSize = 11.sp, color = colorTexto)
+            items(productos, key = { it.id }) { p ->
+                val bajo = p.stock < p.stockMinimo
+                val sinStock = p.stock <= 0
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable { reponer = p }
+                        .padding(horizontal = 20.dp, vertical = 14.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                        Text(p.nombre, fontSize = 17.sp, fontWeight = FontWeight.Bold, color = Texto, modifier = Modifier.weight(1f))
+                        Text("${p.stock}", fontSize = 17.sp, fontWeight = FontWeight.Bold, color = if (bajo) Rojo else Texto)
+                    }
+                    Box(modifier = Modifier.fillMaxWidth().height(8.dp).background(Pista, RoundedCornerShape(4.dp))) {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth((p.stock.toFloat() / maximo).coerceIn(0.03f, 1f))
+                                .height(8.dp)
+                                .background(if (bajo) Rojo else Azul, RoundedCornerShape(4.dp))
+                        )
+                    }
+                    Text(
+                        text = if (sinStock) "! Quiebre · mínimo ${p.stockMinimo}"
+                        else if (bajo) "! Bajo stock · mínimo ${p.stockMinimo}"
+                        else "${p.categoria.ifBlank { "Sin categoría" }} · mínimo ${p.stockMinimo}",
+                        fontSize = 14.sp,
+                        color = if (bajo) RojoTexto else TextoSuave
+                    )
+                }
+            }
         }
+        androidx.compose.material3.SnackbarHost(snackbar)
+    }
+
+    reponer?.let { p ->
+        HojaReposicionView(
+            nombre = p.nombre,
+            sucursal = nombreSucursal,
+            stock = p.stock,
+            minimo = p.stockMinimo,
+            onCerrar = { reponer = null },
+            onEnviar = { cantidad, urgente, nota ->
+                viewModel.declararReposicion(p.id, cantidad, urgente, nota) {
+                    reponer = null
+                    scope.launch { snackbar.showSnackbar("Reposición enviada a gerencia · $cantidad uds") }
+                }
+            }
+        )
     }
 }
 
 @Composable
-fun ProductoBodegaCard(
-    producto: Producto,
-    onReportarDiferencia: () -> Unit,
-    onDeclararAlerta: () -> Unit
-) {
-    val (colorFondoBadge, colorTextoBadge, estadoLabel) = when {
-        producto.stock == 0 -> Triple(PeligroSuave, Peligro, "QUIEBRE")
-        producto.stock < 10 -> Triple(AdvertenciaSuave, Advertencia, "BAJO STOCK")
-        else -> Triple(ExitoSuave, Exito, "NORMAL")
-    }
-
-    Card(
-        colors = CardDefaults.cardColors(containerColor = Superficie),
-        shape = RoundedCornerShape(16.dp),
-        modifier = Modifier.fillMaxWidth()
-    ) {
-        Column(modifier = Modifier.padding(14.dp)) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.Top
-            ) {
-                Column(modifier = Modifier.weight(1f)) {
-                    Text(
-                        text = producto.nombre,
-                        fontWeight = FontWeight.Bold,
-                        fontSize = 15.sp,
-                        color = TextoPrincipal
-                    )
-                    Spacer(modifier = Modifier.height(2.dp))
-                    Text(
-                        text = "Código: ${producto.codigoBarras.ifBlank { "N/A" }} • Cat: ${producto.categoria}",
-                        fontSize = 12.sp,
-                        color = TextoSecundario
-                    )
-                }
-
-                // Badge de Stock
-                Box(
-                    modifier = Modifier
-                        .background(colorFondoBadge, RoundedCornerShape(10.dp))
-                        .padding(horizontal = 8.dp, vertical = 4.dp)
-                ) {
-                    Text(
-                        text = "$estadoLabel (${producto.stock})",
-                        color = colorTextoBadge,
-                        fontWeight = FontWeight.Bold,
-                        fontSize = 12.sp
-                    )
-                }
-            }
-
-            Spacer(modifier = Modifier.height(10.dp))
-
-            // Botones de acción rápida
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                OutlinedButton(
-                    onClick = onReportarDiferencia,
-                    shape = RoundedCornerShape(10.dp),
-                    modifier = Modifier.weight(1f),
-                    contentPadding = PaddingValues(vertical = 4.dp, horizontal = 8.dp)
-                ) {
-                    Icon(
-                        Icons.AutoMirrored.Outlined.CompareArrows,
-                        contentDescription = null,
-                        modifier = Modifier.size(16.dp)
-                    )
-                    Spacer(modifier = Modifier.width(4.dp))
-                    Text("Diferencia", fontSize = 12.sp)
-                }
-
-                OutlinedButton(
-                    onClick = onDeclararAlerta,
-                    shape = RoundedCornerShape(10.dp),
-                    modifier = Modifier.weight(1f),
-                    contentPadding = PaddingValues(vertical = 4.dp, horizontal = 8.dp)
-                ) {
-                    Icon(
-                        Icons.Outlined.Notifications,
-                        contentDescription = null,
-                        modifier = Modifier.size(16.dp)
-                    )
-                    Spacer(modifier = Modifier.width(4.dp))
-                    Text("Alerta", fontSize = 12.sp)
-                }
-            }
-        }
-    }
+private fun Filtro(texto: String, seleccionado: Boolean, onClick: () -> Unit) {
+    Text(
+        text = texto,
+        fontSize = 15.sp,
+        fontWeight = FontWeight.SemiBold,
+        color = if (seleccionado) Color.White else Texto,
+        modifier = Modifier
+            .background(if (seleccionado) Texto else Color.White, RoundedCornerShape(24.dp))
+            .border(BorderStroke(1.dp, Color(0xFFE2E8F0)), RoundedCornerShape(24.dp))
+            .clickable(onClick = onClick)
+            .padding(horizontal = 18.dp, vertical = 12.dp)
+    )
 }

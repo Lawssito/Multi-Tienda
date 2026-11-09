@@ -8,8 +8,15 @@ import androidx.room.TypeConverter
 import androidx.room.TypeConverters
 import com.bexai.multitienda.model.Conteo
 import com.bexai.multitienda.model.ConteoDetalle
+import com.bexai.multitienda.model.Despacho
+import com.bexai.multitienda.model.DespachoDetalle
 import com.bexai.multitienda.model.Movimiento
 import com.bexai.multitienda.model.Producto
+import com.bexai.multitienda.model.Recepcion
+import com.bexai.multitienda.model.RecepcionDetalle
+import com.bexai.multitienda.model.AlertaRevisada
+import com.bexai.multitienda.model.Reposicion
+import com.bexai.multitienda.model.StockSucursal
 import com.bexai.multitienda.model.Sucursal
 import com.bexai.multitienda.model.Usuario
 import java.util.Date
@@ -30,9 +37,16 @@ class ConvertidoresAe {
         Movimiento::class,
         Sucursal::class,
         Conteo::class,
-        ConteoDetalle::class
+        ConteoDetalle::class,
+        Despacho::class,
+        DespachoDetalle::class,
+        Recepcion::class,
+        RecepcionDetalle::class,
+        Reposicion::class,
+        StockSucursal::class,
+        AlertaRevisada::class
     ],
-    version = 3
+    version = 8
 )
 abstract class AppDatabase : RoomDatabase() {
     abstract fun usuarioDao(): UsuarioDao
@@ -40,6 +54,11 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun productoDao(): ProductoDao
     abstract fun sucursalDao(): SucursalDao
     abstract fun conteoDao(): ConteoDao
+    abstract fun despachoDao(): DespachoDao
+    abstract fun recepcionDao(): RecepcionDao
+    abstract fun reposicionDao(): ReposicionDao
+    abstract fun stockSucursalDao(): StockSucursalDao
+    abstract fun alertaRevisadaDao(): AlertaRevisadaDao
 
     companion object {
         @Volatile

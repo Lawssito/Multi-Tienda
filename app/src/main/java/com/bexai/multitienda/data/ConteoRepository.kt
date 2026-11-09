@@ -32,13 +32,16 @@ class ConteoRepository(private val db: AppDatabase) {
 
     private val conteoDao = db.conteoDao()
     private val movimientoDao = db.movimientoDao()
-    private val productoDao = db.productoDao()
+    private val existencias = ExistenciasRepository(db)
 
     fun enviados(sucursalId: Int): Flow<List<Conteo>> = conteoDao.enviados(sucursalId)
 
     /** Líneas contadas cuya diferencia (contado - sistema) no es cero. */
     fun diferencias(conteoId: Int): Flow<List<LineaConteo>> =
         conteoDao.lineas(conteoId).map { lineas -> lineas.filter { it.diferencia != 0 } }
+
+    /** Último conteo enviado por el operador, sea cual sea su estado actual. */
+    fun ultimoConteo(sucursalId: Int): Flow<Conteo?> = conteoDao.ultimoEnviadoOAprobado(sucursalId)
 
     suspend fun ultimoEnviado(sucursalId: Int): Conteo? = conteoDao.ultimoEnviado(sucursalId)
 
@@ -61,7 +64,7 @@ class ConteoRepository(private val db: AppDatabase) {
                         fechaHora = ahora
                     )
                 )
-                productoDao.fijarStock(linea.productoId, linea.contado)
+                existencias.fijar(linea.productoId, conteo.sucursalId, linea.contado)
             }
         conteoDao.cambiarEstado(conteoId, EstadoConteo.APROBADO, conteo.fechaEnvio)
         true

@@ -88,6 +88,8 @@ import com.bexai.multitienda.ui.theme.AzulSuave
 import com.bexai.multitienda.ui.theme.BarraFondo
 import com.bexai.multitienda.ui.theme.Borde
 import com.bexai.multitienda.ui.theme.Celeste
+import com.bexai.multitienda.ui.theme.Exito
+import com.bexai.multitienda.ui.theme.ExitoSuave
 import com.bexai.multitienda.ui.theme.GrisBarra
 import com.bexai.multitienda.ui.theme.Peligro
 import com.bexai.multitienda.ui.theme.PeligroSuave
@@ -99,9 +101,12 @@ import com.bexai.multitienda.ui.theme.TextoSecundario
 fun EscanerView(
     tipo: TipoMovimiento,
     esConteo: Boolean,
+    esRecepcion: Boolean,
+    esCaja: Boolean,
     sucursal: String,
     estado: EscanerUiState,
     onTipoChange: (TipoMovimiento, Boolean) -> Unit,
+    onCajaElegida: () -> Unit,
     onCodigo: (String) -> Unit,
     onSinCodigo: () -> Unit,
     onNuevaBusqueda: () -> Unit,
@@ -113,6 +118,8 @@ fun EscanerView(
     onCerrarHoja: () -> Unit,
     onDescartarHoja: () -> Unit,
     onGuardarHoja: (Int, String) -> Unit,
+    onComenzarCaja: (Int) -> Unit,
+    onCerrarCaja: () -> Unit,
     onCerrar: () -> Unit,
     onListo: () -> Unit,
     modifier: Modifier = Modifier
@@ -201,7 +208,10 @@ fun EscanerView(
                 sucursal = sucursal,
                 tipo = tipo,
                 esConteo = esConteo,
+                esRecepcion = esRecepcion,
+                esCaja = esCaja,
                 onTipoChange = onTipoChange,
+                onCajaElegida = onCajaElegida,
                 onCerrar = onCerrar,
                 onListo = onListo,
                 modifier = Modifier.align(Alignment.TopCenter)
@@ -230,9 +240,19 @@ fun EscanerView(
     if (estado.manualAbierto) {
         HojaCodigoManualView(
             error = estado.errorManual,
+            permiteCaja = (tipo == TipoMovimiento.ENTRADA || esCaja) && !esConteo && !esRecepcion,
             onCerrar = onCerrarManual,
             onBuscar = onBuscarManual,
             onEditar = onEditarManual
+        )
+    }
+
+    // Hoja inferior: Caja detectada (QR de un despacho leído en Entrada)
+    estado.caja?.let { caja ->
+        HojaCajaDetectadaView(
+            caja = caja,
+            onComenzar = { onComenzarCaja(caja.despachoId) },
+            onCerrar = onCerrarCaja
         )
     }
 
@@ -315,7 +335,10 @@ private fun BarraSuperiorEscaner(
     sucursal: String,
     tipo: TipoMovimiento,
     esConteo: Boolean,
+    esRecepcion: Boolean,
+    esCaja: Boolean,
     onTipoChange: (TipoMovimiento, Boolean) -> Unit,
+    onCajaElegida: () -> Unit,
     onCerrar: () -> Unit,
     onListo: () -> Unit,
     modifier: Modifier = Modifier
@@ -338,7 +361,7 @@ private fun BarraSuperiorEscaner(
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
             Text(sucursal, color = Color.White, fontSize = 18.sp, fontWeight = FontWeight.Bold)
             Spacer(Modifier.height(6.dp))
-            ChipTipo(tipo, esConteo, onTipoChange)
+            ChipTipo(tipo, esConteo, esRecepcion, esCaja, onTipoChange, onCajaElegida)
         }
 
         Button(
@@ -349,9 +372,17 @@ private fun BarraSuperiorEscaner(
 }
 
 @Composable
-private fun ChipTipo(tipo: TipoMovimiento, esConteo: Boolean, onTipoChange: (TipoMovimiento, Boolean) -> Unit) {
+private fun ChipTipo(
+    tipo: TipoMovimiento,
+    esConteo: Boolean,
+    esRecepcion: Boolean,
+    esCaja: Boolean,
+    onTipoChange: (TipoMovimiento, Boolean) -> Unit,
+    onCajaElegida: () -> Unit
+) {
     var abierto by remember { mutableStateOf(false) }
     val (texto, color, fondo) = when {
+        esRecepcion || esCaja -> Triple("Entrada · caja", Exito, ExitoSuave)
         esConteo -> Triple("Conteo", TextoPrincipal, SuperficieVariante)
         tipo == TipoMovimiento.ENTRADA -> Triple("Entrada", AzulOscuro, AzulSuave)
         tipo == TipoMovimiento.SALIDA -> Triple("Salida", Peligro, PeligroSuave)
@@ -362,29 +393,36 @@ private fun ChipTipo(tipo: TipoMovimiento, esConteo: Boolean, onTipoChange: (Tip
             modifier = Modifier
                 .clip(CircleShape)
                 .background(fondo)
-                .clickable { abierto = true }
+                .clickable(enabled = !esRecepcion) { abierto = true }
                 .padding(horizontal = 14.dp, vertical = 6.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
             Box(Modifier.size(8.dp).background(color, CircleShape))
             Spacer(Modifier.width(8.dp))
             Text(texto, color = color, fontWeight = FontWeight.Bold)
-            Icon(Icons.Default.KeyboardArrowDown, null, tint = color, modifier = Modifier.size(20.dp))
+            if (!esRecepcion) {
+                Icon(Icons.Default.KeyboardArrowDown, null, tint = color, modifier = Modifier.size(20.dp))
+            }
         }
         // Conteo se guarda como Ajuste (tipo AJUSTE) pero con el modo conteo activado
         DropdownMenu(expanded = abierto, onDismissRequest = { abierto = false }) {
             listOf(
                 Triple(TipoMovimiento.ENTRADA, false, "Entrada"),
+                Triple(TipoMovimiento.ENTRADA, true, "Caja"),
                 Triple(TipoMovimiento.SALIDA, false, "Salida"),
                 Triple(TipoMovimiento.AJUSTE, false, "Ajuste"),
                 Triple(TipoMovimiento.AJUSTE, true, "Conteo")
-            ).forEach { (opcionTipo, opcionConteo, nombre) ->
+            ).forEach { (opcionTipo, marca, nombre) ->
+                // La marca es "es Conteo", salvo en la opción Caja (Entrada con marca true)
+                val esOpcionCaja = nombre == "Caja"
                 DropdownMenuItem(
                     text = { Text(nombre) },
                     onClick = {
                         abierto = false
-                        if (opcionTipo != tipo || opcionConteo != esConteo) {
-                            onTipoChange(opcionTipo, opcionConteo)
+                        if (esOpcionCaja) {
+                            if (!esCaja) onCajaElegida()
+                        } else if (opcionTipo != tipo || marca != esConteo || esCaja) {
+                            onTipoChange(opcionTipo, marca)
                         }
                     }
                 )
@@ -471,7 +509,7 @@ private fun PanelEscaner(
 @Composable
 private fun TarjetaLectura(lectura: UltimaLectura, onClick: () -> Unit) {
     val esAjuste = lectura.tipo == TipoMovimiento.AJUSTE && !lectura.esConteo
-    val detalle = if (lectura.esConteo) "Conteo · sistema ${lectura.stockAntes}" else when (lectura.tipo) {
+    val detalle = if (lectura.detalleRecepcion != null) lectura.detalleRecepcion else if (lectura.esConteo) "Conteo · sistema ${lectura.stockAntes}" else when (lectura.tipo) {
         TipoMovimiento.ENTRADA -> "Entrada +${lectura.cantidad} · stock ${lectura.stockAntes} → ${lectura.stockDespues}"
         TipoMovimiento.SALIDA -> "Salida −${lectura.cantidad} · stock ${lectura.stockAntes} → ${lectura.stockDespues}"
         TipoMovimiento.AJUSTE -> "Ajuste · stock ${lectura.stockAntes} → ${lectura.stockDespues}"

@@ -27,6 +27,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
@@ -54,6 +55,7 @@ fun InicioOperadorView (
     resumen: ResumenDia,
     onMovimiento: (TipoMovimiento) -> Unit,
     onConteo: () -> Unit,
+    onCambiarSucursal: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     Column(
@@ -64,7 +66,7 @@ fun InicioOperadorView (
             .padding(horizontal = 20.dp, vertical = 16.dp),
         verticalArrangement = Arrangement.spacedBy(20.dp)
     ) {
-        EncabezadoSucursal(sucursal)
+        EncabezadoSucursal(sucursal, onCambiarSucursal)
         TarjetaResumen(fecha, resumen)
 
         Text(
@@ -105,8 +107,11 @@ fun InicioOperadorView (
 }
 
 @Composable
-private fun EncabezadoSucursal(sucursal: String) {
+private fun EncabezadoSucursal(sucursal: String, onClick: () -> Unit) {
     Row(
+        modifier = Modifier
+            .clip(RoundedCornerShape(12.dp))
+            .clickable(onClick = onClick),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(10.dp)
     ) {
@@ -210,7 +215,8 @@ private fun InicioOperadorPreview() {
             fecha = "29 sep",
             resumen = ResumenDia(entradas = 214, salidas = 96, movimientos = 24, contados = 120),
             onMovimiento = {},
-            onConteo = {}
+            onConteo = {},
+            onCambiarSucursal = {}
         )
     }
 }

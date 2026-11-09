@@ -1,5 +1,8 @@
 package com.bexai.multitienda.ui.navigation
 
+import androidx.compose.runtime.collectAsState
+import androidx.lifecycle.viewmodel.compose.viewModel
+import com.bexai.multitienda.viewmodel.EncargadoViewModel
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.material3.MaterialTheme
@@ -17,13 +20,15 @@ fun ConBarraEncargado(
 ) {
     val entrada by navController.currentBackStackEntryAsState()
     val rutaActual = entrada?.destination?.route
+    val vm: EncargadoViewModel = viewModel()
+    val totalAlertas by vm.totalAlertas.collectAsState()
 
     Scaffold(
         containerColor = MaterialTheme.colorScheme.background,
         contentWindowInsets = WindowInsets(0),
         bottomBar = {
             RoleBottomBar(
-                items = itemsEncargado,
+                items = itemsEncargado.map { if (it.ruta == Ruta.EncargadoAlertas.ruta) it.copy(badge = totalAlertas) else it },
                 rutaActual = rutaActual,
                 onItemClick = { item ->
                     navController.navigate(item.ruta) {
