@@ -1,10 +1,13 @@
 package com.bexai.multitienda.util
 
+import android.content.ActivityNotFoundException
 import android.content.Context
 import android.content.Intent
 import android.graphics.Paint
 import android.graphics.Typeface
 import android.graphics.pdf.PdfDocument
+import android.util.Log
+import android.widget.Toast
 import androidx.core.content.FileProvider
 import java.io.File
 import java.text.SimpleDateFormat
@@ -27,6 +30,7 @@ object ReportePdf {
     /**
      * @param pesos ancho relativo de cada columna (mismo largo que [encabezados])
      * @return el archivo PDF generado
+     * @throws java.io.IOException si no se pudo escribir el archivo en la caché
      */
     fun generar(
         contexto: Context,
@@ -52,64 +56,94 @@ object ReportePdf {
         val altoFila = 18f
 
         val pdf = PdfDocument()
-        var numero = 1
-        var pagina = pdf.startPage(PdfDocument.PageInfo.Builder(ANCHO, ALTO, numero).create())
-        var lienzo = pagina.canvas
-        var y = MARGEN + 16f
+        // try/finally: el PdfDocument se cierra aunque falle la escritura (libera la memoria nativa)
+        try {
+            var numero = 1
+            var pagina = pdf.startPage(PdfDocument.PageInfo.Builder(ANCHO, ALTO, numero).create())
+            var lienzo = pagina.canvas
+            var y = MARGEN + 16f
 
-        fun cabeceraTabla() {
-            var x = MARGEN
-            encabezados.forEachIndexed { i, texto ->
-                lienzo.drawText(recortar(texto, pEnc, anchos[i] - 6f), x, y, pEnc)
-                x += anchos[i]
-            }
-            y += 6f
-            lienzo.drawLine(MARGEN, y, ANCHO - MARGEN, y, pLinea)
-            y += 14f
-        }
-
-        lienzo.drawText(titulo, MARGEN, y, pTitulo)
-        y += 16f
-        val ahora = SimpleDateFormat("dd/MM/yyyy HH:mm", Locale.getDefault()).format(Date())
-        lienzo.drawText("$subtitulo · Generado $ahora", MARGEN, y, pSub)
-        y += 24f
-        cabeceraTabla()
-
-        filas.forEach { fila ->
-            if (y + altoFila > ALTO - MARGEN) {
-                pdf.finishPage(pagina)
-                numero++
-                pagina = pdf.startPage(PdfDocument.PageInfo.Builder(ANCHO, ALTO, numero).create())
-                lienzo = pagina.canvas
-                y = MARGEN + 16f
-                cabeceraTabla()
-            }
-            var x = MARGEN
-            fila.forEachIndexed { i, texto ->
-                if (i < anchos.size) {
-                    lienzo.drawText(recortar(texto, pTexto, anchos[i] - 6f), x, y, pTexto)
+            fun cabeceraTabla() {
+                var x = MARGEN
+                encabezados.forEachIndexed { i, texto ->
+                    lienzo.drawText(recortar(texto, pEnc, anchos[i] - 6f), x, y, pEnc)
                     x += anchos[i]
                 }
+                y += 6f
+                lienzo.drawLine(MARGEN, y, ANCHO - MARGEN, y, pLinea)
+                y += 14f
             }
-            y += altoFila
-        }
-        if (filas.isEmpty()) lienzo.drawText("Sin datos para mostrar.", MARGEN, y, pTexto)
 
-        pdf.finishPage(pagina)
-        archivo.outputStream().use { pdf.writeTo(it) }
-        pdf.close()
+            lienzo.drawText(titulo, MARGEN, y, pTitulo)
+            y += 16f
+            val ahora = SimpleDateFormat("dd/MM/yyyy HH:mm", Locale.getDefault()).format(Date())
+            lienzo.drawText("$subtitulo · Generado $ahora", MARGEN, y, pSub)
+            y += 24f
+            cabeceraTabla()
+
+            filas.forEach { fila ->
+                if (y + altoFila > ALTO - MARGEN) {
+                    pdf.finishPage(pagina)
+                    numero++
+                    pagina = pdf.startPage(PdfDocument.PageInfo.Builder(ANCHO, ALTO, numero).create())
+                    lienzo = pagina.canvas
+                    y = MARGEN + 16f
+                    cabeceraTabla()
+                }
+                var x = MARGEN
+                fila.forEachIndexed { i, texto ->
+                    if (i < anchos.size) {
+                        lienzo.drawText(recortar(texto, pTexto, anchos[i] - 6f), x, y, pTexto)
+                        x += anchos[i]
+                    }
+                }
+                y += altoFila
+            }
+            if (filas.isEmpty()) lienzo.drawText("Sin datos para mostrar.", MARGEN, y, pTexto)
+
+            pdf.finishPage(pagina)
+            archivo.outputStream().use { pdf.writeTo(it) }
+        } finally {
+            pdf.close()
+        }
         return archivo
     }
 
     /** Abre el selector de Android para compartir o guardar el PDF. */
     fun compartir(contexto: Context, archivo: File) {
-        val uri = FileProvider.getUriForFile(contexto, "${contexto.packageName}.fileprovider", archivo)
-        val intent = Intent(Intent.ACTION_SEND).apply {
-            type = "application/pdf"
-            putExtra(Intent.EXTRA_STREAM, uri)
-            addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+        try {
+            val uri = FileProvider.getUriForFile(contexto, "${contexto.packageName}.fileprovider", archivo)
+            val intent = Intent(Intent.ACTION_SEND).apply {
+                type = "application/pdf"
+                putExtra(Intent.EXTRA_STREAM, uri)
+                addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+            }
+            contexto.startActivity(Intent.createChooser(intent, "Exportar PDF"))
+        } catch (e: ActivityNotFoundException) {
+            avisarError(contexto, "No hay una app para compartir el PDF", e)
+        } catch (e: IllegalArgumentException) {
+            // FileProvider rechaza la ruta si no coincide con res/xml/file_paths.xml
+            avisarError(contexto, "No se pudo compartir el PDF", e)
         }
-        contexto.startActivity(Intent.createChooser(intent, "Exportar PDF"))
+    }
+
+    /**
+     * Genera el PDF y lo comparte. Si algo falla (disco lleno, sin app para compartir…) muestra
+     * un aviso en vez de cerrar la app. Es lo que usan las pantallas de Gerencia.
+     */
+    fun exportar(contexto: Context, generarArchivo: () -> File) {
+        val archivo = try {
+            generarArchivo()
+        } catch (e: Exception) {
+            avisarError(contexto, "No se pudo generar el PDF", e)
+            return
+        }
+        compartir(contexto, archivo)
+    }
+
+    private fun avisarError(contexto: Context, mensaje: String, error: Exception) {
+        Log.e("ReportePdf", mensaje, error)
+        Toast.makeText(contexto, mensaje, Toast.LENGTH_LONG).show()
     }
 
     /** Acorta el texto con "…" para que entre en [ancho]. */

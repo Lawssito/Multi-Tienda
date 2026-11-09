@@ -15,33 +15,41 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavGraphBuilder
 import androidx.navigation.NavHostController
 import androidx.navigation.NavType
-import androidx.navigation.navArgument
 import androidx.navigation.compose.composable
+import androidx.navigation.navArgument
 import androidx.navigation.navigation
-import com.bexai.multitienda.data.SesionSucursal
+import com.bexai.multitienda.data.sesion.SesionSucursal
 import com.bexai.multitienda.model.LineaRecepcion
 import com.bexai.multitienda.model.TipoMovimiento
-import com.bexai.multitienda.ui.view.CuentaView
 import com.bexai.multitienda.ui.components.BannerConfirmacion
-import com.bexai.multitienda.ui.view.operador.ConteoView
-import com.bexai.multitienda.ui.view.operador.EscanerView
-import com.bexai.multitienda.ui.view.operador.InicioOperadorView
-import com.bexai.multitienda.ui.view.operador.HojaDanadoView
-import com.bexai.multitienda.ui.view.operador.RecepcionView
-import com.bexai.multitienda.ui.view.operador.ResumenConteoView
-import com.bexai.multitienda.ui.view.operador.ResumenRecepcionView
-import com.bexai.multitienda.ui.view.operador.SeleccionarSucursalView
-import com.bexai.multitienda.viewmodel.ConteoViewModel
-import com.bexai.multitienda.viewmodel.EscanerViewModel
-import com.bexai.multitienda.viewmodel.InicioOperadorViewModel
-import com.bexai.multitienda.viewmodel.RecepcionViewModel
-import com.bexai.multitienda.viewmodel.SeleccionarSucursalViewModel
+import com.bexai.multitienda.ui.view.comun.CuentaView
+import com.bexai.multitienda.ui.view.operador.conteo.ConteoView
+import com.bexai.multitienda.ui.view.operador.conteo.ResumenConteoView
+import com.bexai.multitienda.ui.view.operador.escaner.EscanerView
+import com.bexai.multitienda.ui.view.operador.inicio.InicioOperadorView
+import com.bexai.multitienda.ui.view.operador.inicio.SeleccionarSucursalView
+import com.bexai.multitienda.ui.view.operador.recepcion.HojaDanadoView
+import com.bexai.multitienda.ui.view.operador.recepcion.RecepcionView
+import com.bexai.multitienda.ui.view.operador.recepcion.ResumenRecepcionView
+import com.bexai.multitienda.viewmodel.operador.ConteoViewModel
+import com.bexai.multitienda.viewmodel.operador.EscanerViewModel
+import com.bexai.multitienda.viewmodel.operador.InicioOperadorViewModel
+import com.bexai.multitienda.viewmodel.operador.RecepcionViewModel
+import com.bexai.multitienda.viewmodel.operador.SeleccionarSucursalViewModel
 
+/**
+ * Grafo de navegación del Operador.
+ *
+ * Flujo: elegir sucursal → Inicio → (Escáner | Conteo → Resumen | Recepción de caja → Resumen).
+ * Las pantallas de resultado avisan a Inicio con savedStateHandle ("conteoEnviado" y
+ * "recepcionEnviada") para mostrar el banner de confirmación.
+ */
 fun NavGraphBuilder.operadorNavGraph(navController: NavHostController) {
     navigation(
         startDestination = Ruta.OperadorSucursal.ruta,
         route = Ruta.GRAFO_OPERADOR
     ) {
+        // ---------- Elegir sucursal (primera pantalla del operador) ----------
         composable(Ruta.OperadorSucursal.ruta) {
             val viewModel: SeleccionarSucursalViewModel = viewModel()
             val sucursales by viewModel.sucursales.collectAsState()
@@ -61,6 +69,7 @@ fun NavGraphBuilder.operadorNavGraph(navController: NavHostController) {
                 }
             )
         }
+        // ---------- Inicio: resumen del día y banners de confirmación ----------
         composable(Ruta.OperadorInicio.ruta) { entrada ->
             val viewModel : InicioOperadorViewModel = viewModel()
             val estado by viewModel.uiState.collectAsState()
@@ -107,6 +116,7 @@ fun NavGraphBuilder.operadorNavGraph(navController: NavHostController) {
                 }
             }
         }
+        // ---------- Conteo masivo ----------
         composable(Ruta.OperadorConteo.ruta) {
             val conteoViewModel: ConteoViewModel = viewModel()
             val estado by conteoViewModel.uiState.collectAsState()
@@ -117,6 +127,7 @@ fun NavGraphBuilder.operadorNavGraph(navController: NavHostController) {
                 onFinalizar = { navController.navigate(Ruta.OperadorResumenConteo.ruta) }
             )
         }
+        // ---------- Resumen del conteo (comparte el ViewModel de Conteo) ----------
         composable(Ruta.OperadorResumenConteo.ruta) { entrada ->
             // Comparte el ViewModel de la pantalla Conteo (sigue en la pila debajo de esta)
             val conteoEntrada = remember(entrada) { navController.getBackStackEntry(Ruta.OperadorConteo.ruta) }
@@ -139,6 +150,7 @@ fun NavGraphBuilder.operadorNavGraph(navController: NavHostController) {
                 }
             )
         }
+        // ---------- Recepción de una caja (despacho) y hoja de dañados ----------
         composable(
             route = Ruta.OperadorRecepcion.patron,
             arguments = listOf(navArgument("despachoId") { type = NavType.IntType })
@@ -172,6 +184,7 @@ fun NavGraphBuilder.operadorNavGraph(navController: NavHostController) {
                 )
             }
         }
+        // ---------- Resumen de la recepción antes de enviarla ----------
         composable(
             route = Ruta.OperadorResumenRecepcion.patron,
             arguments = listOf(navArgument("despachoId") { type = NavType.IntType })
@@ -190,6 +203,7 @@ fun NavGraphBuilder.operadorNavGraph(navController: NavHostController) {
                 }
             )
         }
+        // ---------- Cuenta ----------
         composable(Ruta.OperadorCuenta.ruta) {
             ConBarraOperador(navController) { padding ->
                 val sucursalCuenta by SesionSucursal.actual.collectAsState()
@@ -207,6 +221,7 @@ fun NavGraphBuilder.operadorNavGraph(navController: NavHostController) {
                 )
             }
         }
+        // ---------- Escáner: Entrada, Salida, Ajuste, Conteo y recepción de caja ----------
         composable(
             route = Ruta.OperadorEscaner.patron,
             arguments = listOf(

@@ -5,6 +5,10 @@ import androidx.room.ForeignKey
 import androidx.room.Index
 import androidx.room.PrimaryKey
 
+/**
+ * Movimiento de stock en una sucursal. En ENTRADA y SALIDA [cantidad] son las unidades movidas;
+ * en AJUSTE es el nuevo total (y [motivo] explica el ajuste).
+ */
 @Entity(
     foreignKeys = [ForeignKey(
         entity = Producto::class,

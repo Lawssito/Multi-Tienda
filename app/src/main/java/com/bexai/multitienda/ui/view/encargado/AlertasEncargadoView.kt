@@ -38,19 +38,19 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavHostController
 import com.bexai.multitienda.model.EstadoReposicion
 import com.bexai.multitienda.model.Producto
-import com.bexai.multitienda.ui.navigation.Ruta
 import com.bexai.multitienda.ui.components.PastillaSucursal
+import com.bexai.multitienda.ui.navigation.Ruta
 import com.bexai.multitienda.ui.theme.Azul
-import com.bexai.multitienda.viewmodel.EncargadoViewModel
+import com.bexai.multitienda.ui.theme.FondoPantalla
+import com.bexai.multitienda.ui.theme.NaranjaFondo
+import com.bexai.multitienda.ui.theme.NaranjaTexto
+import com.bexai.multitienda.ui.theme.Peligro
+import com.bexai.multitienda.ui.theme.PeligroSuave
+import com.bexai.multitienda.ui.theme.TextoPrincipal
+import com.bexai.multitienda.ui.theme.TextoSecundario
+import com.bexai.multitienda.viewmodel.encargado.EncargadoViewModel
 import kotlinx.coroutines.launch
 
-private val FondoPantalla = Color(0xFFF4F6FA)
-private val Texto = Color(0xFF0F172A)
-private val TextoSuave = Color(0xFF5B6474)
-private val RojoTexto = Color(0xFFB91C1C)
-private val RojoFondo = Color(0xFFFEE2E2)
-private val NaranjaTexto = Color(0xFFB45309)
-private val NaranjaFondo = Color(0xFFFFEBD2)
 
 /**
  * Alertas del encargado: bandeja de lo que requiere una acción suya.
@@ -91,9 +91,9 @@ fun AlertasEncargadoView(
                     PastillaSucursal(nombreSucursal, onClick = onCambiarSucursal)
                     Text(
                         if (total == 0) "Sin pendientes" else "$total por resolver",
-                        fontSize = 15.sp, color = TextoSuave
+                        fontSize = 15.sp, color = TextoSecundario
                     )
-                    Text("Alertas", fontSize = 32.sp, fontWeight = FontWeight.ExtraBold, color = Texto)
+                    Text("Alertas", fontSize = 32.sp, fontWeight = FontWeight.ExtraBold, color = TextoPrincipal)
                 }
             }
 
@@ -143,9 +143,9 @@ fun AlertasEncargadoView(
                         modifier = Modifier.fillMaxWidth().background(Color.White, RoundedCornerShape(18.dp)).padding(16.dp),
                         verticalArrangement = Arrangement.spacedBy(2.dp)
                     ) {
-                        Text(nombre, fontSize = 16.sp, fontWeight = FontWeight.Bold, color = Texto)
-                        Text("Nuevo total ${a.cantidad} uds · ${a.motivo ?: "sin motivo"}", fontSize = 14.sp, color = TextoSuave)
-                        Text(hora, fontSize = 13.sp, color = TextoSuave)
+                        Text(nombre, fontSize = 16.sp, fontWeight = FontWeight.Bold, color = TextoPrincipal)
+                        Text("Nuevo total ${a.cantidad} uds · ${a.motivo ?: "sin motivo"}", fontSize = 14.sp, color = TextoSecundario)
+                        Text(hora, fontSize = 13.sp, color = TextoSecundario)
                     }
                 }
             }
@@ -164,7 +164,7 @@ fun AlertasEncargadoView(
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             Column(modifier = Modifier.weight(1f)) {
-                                Text(nombre, fontSize = 16.sp, fontWeight = FontWeight.Bold, color = Texto)
+                                Text(nombre, fontSize = 16.sp, fontWeight = FontWeight.Bold, color = TextoPrincipal)
                                 Text(
                                     "${r.cantidad} uds" + (if (r.urgente) " · urgente" else "") +
                                         when (r.estado) {
@@ -172,12 +172,12 @@ fun AlertasEncargadoView(
                                             EstadoReposicion.RECHAZADA -> " · ${r.motivoRechazo ?: "sin motivo"}"
                                             else -> ""
                                         },
-                                    fontSize = 14.sp, color = TextoSuave
+                                    fontSize = 14.sp, color = TextoSecundario
                                 )
                             }
                             val (etiqueta, colorTexto, colorFondo) = when (r.estado) {
                                 EstadoReposicion.APROBADA -> Triple("Aprobada", Color(0xFF15803D), Color(0xFFDCFCE7))
-                                EstadoReposicion.RECHAZADA -> Triple("Rechazada", RojoTexto, RojoFondo)
+                                EstadoReposicion.RECHAZADA -> Triple("Rechazada", Peligro, PeligroSuave)
                                 else -> Triple("Enviada", NaranjaTexto, NaranjaFondo)
                             }
                             Text(
@@ -190,7 +190,7 @@ fun AlertasEncargadoView(
             }
 
             if (total == 0 && enviadas.isEmpty() && ajustes.isEmpty()) {
-                item { Text("No hay nada pendiente por ahora.", fontSize = 15.sp, color = TextoSuave) }
+                item { Text("No hay nada pendiente por ahora.", fontSize = 15.sp, color = TextoSecundario) }
             }
         }
         SnackbarHost(snackbar, modifier = Modifier.align(Alignment.BottomCenter).padding(16.dp))
@@ -226,9 +226,9 @@ fun AlertasEncargadoView(
 @Composable
 private fun Seccion(titulo: String, cantidad: Int) {
     Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
-        Text(titulo, fontSize = 18.sp, fontWeight = FontWeight.ExtraBold, color = Texto)
+        Text(titulo, fontSize = 18.sp, fontWeight = FontWeight.ExtraBold, color = TextoPrincipal)
         Text(
-            "$cantidad", fontSize = 13.sp, fontWeight = FontWeight.Bold, color = TextoSuave,
+            "$cantidad", fontSize = 13.sp, fontWeight = FontWeight.Bold, color = TextoSecundario,
             modifier = Modifier.background(Color(0xFFE2E8F0), RoundedCornerShape(10.dp)).padding(horizontal = 8.dp, vertical = 2.dp)
         )
     }
@@ -241,11 +241,11 @@ private fun TarjetaBajoMinimo(p: Producto, onReponer: () -> Unit) {
         verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-            Text(p.nombre, fontSize = 18.sp, fontWeight = FontWeight.Bold, color = Texto, modifier = Modifier.weight(1f))
+            Text(p.nombre, fontSize = 18.sp, fontWeight = FontWeight.Bold, color = TextoPrincipal, modifier = Modifier.weight(1f))
             Text(
                 "Stock ${p.stock} / mín. ${p.stockMinimo}",
-                fontSize = 13.sp, fontWeight = FontWeight.Bold, color = RojoTexto,
-                modifier = Modifier.background(RojoFondo, RoundedCornerShape(10.dp)).padding(horizontal = 10.dp, vertical = 6.dp)
+                fontSize = 13.sp, fontWeight = FontWeight.Bold, color = Peligro,
+                modifier = Modifier.background(PeligroSuave, RoundedCornerShape(10.dp)).padding(horizontal = 10.dp, vertical = 6.dp)
             )
         }
         Box(

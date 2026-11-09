@@ -36,6 +36,11 @@ import com.bexai.multitienda.ui.theme.Celeste
 import com.bexai.multitienda.ui.theme.GrisBarra
 import com.bexai.multitienda.ui.theme.MultiTiendaTheme
 
+// =====================================================================
+// Barra inferior de navegación, común a los tres roles (estilo del mockup).
+// =====================================================================
+
+/** Un botón de la barra: ruta de destino, texto, ícono y contador opcional (badge). */
 data class ItemNav(
     val ruta : String,
     val etiqueta : String,

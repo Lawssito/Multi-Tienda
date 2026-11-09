@@ -8,7 +8,7 @@ import androidx.room.Index
  * StockSucursal: unidades de un producto en una sucursal.
  *
  * Es la fuente de verdad del stock por sucursal. `Producto.stock` se mantiene como el total
- * global (la suma de todas las sucursales); lo actualiza [com.bexai.multitienda.data.ExistenciasRepository].
+ * global (la suma de todas las sucursales); lo actualiza [com.bexai.multitienda.data.repository.ExistenciasRepository].
  */
 @Entity(
     primaryKeys = ["productoId", "sucursalId"],

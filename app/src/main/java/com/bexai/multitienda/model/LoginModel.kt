@@ -1,5 +1,6 @@
 package com.bexai.multitienda.model
 
+/** Estado del formulario de login: lo que se escribe, los errores de cada campo y el usuario autenticado. */
 data class LoginModel(
     val email: String = "",
     val password: String = "",

@@ -46,7 +46,6 @@ sealed class Ruta(val ruta: String) {
 
     // Pantalla del grafo de encargado
     data object EncargadoInicio : Ruta("encargado/inicio")
-    data object EncargadoStock : Ruta("encargado/stock")
     data object EncargadoDiferencias : Ruta("encargado/diferencias")
     data object EncargadoSucursal : Ruta("encargado/sucursal")
     data object EncargadoCuenta : Ruta("encargado/cuenta")

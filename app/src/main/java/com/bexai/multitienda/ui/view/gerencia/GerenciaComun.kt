@@ -20,22 +20,12 @@ import androidx.compose.ui.unit.sp
 import com.bexai.multitienda.model.Producto
 import com.bexai.multitienda.model.StockSucursal
 import com.bexai.multitienda.model.Sucursal
+import com.bexai.multitienda.ui.theme.Peligro
+import com.bexai.multitienda.ui.theme.TextoPrincipal
 import com.bexai.multitienda.util.ReportePdf
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
-
-// Colores del mockup v6 compartidos por las pantallas de Gerencia
-internal val GFondo = Color(0xFFF4F6FA)
-internal val GTexto = Color(0xFF0F172A)
-internal val GTextoSuave = Color(0xFF5B6474)
-internal val GRojo = Color(0xFFDC2626)
-internal val GRojoTexto = Color(0xFFB91C1C)
-internal val GRojoFondo = Color(0xFFFEE2E2)
-internal val GNaranjaTexto = Color(0xFFB45309)
-internal val GNaranjaFondo = Color(0xFFFFEBD2)
-internal val GAzulTexto = Color(0xFF1D4ED8)
-internal val GAzulFondo = Color(0xFFDBEAFE)
 
 @Composable
 internal fun GChip(texto: String, seleccionado: Boolean, onClick: () -> Unit) {
@@ -43,9 +33,9 @@ internal fun GChip(texto: String, seleccionado: Boolean, onClick: () -> Unit) {
         text = texto,
         fontSize = 15.sp,
         fontWeight = FontWeight.SemiBold,
-        color = if (seleccionado) Color.White else GTexto,
+        color = if (seleccionado) Color.White else TextoPrincipal,
         modifier = Modifier
-            .background(if (seleccionado) GTexto else Color.White, RoundedCornerShape(24.dp))
+            .background(if (seleccionado) TextoPrincipal else Color.White, RoundedCornerShape(24.dp))
             .border(BorderStroke(1.dp, Color(0xFFE2E8F0)), RoundedCornerShape(24.dp))
             .clickable(onClick = onClick)
             .padding(horizontal = 16.dp, vertical = 10.dp)
@@ -64,8 +54,8 @@ internal fun BotonPdf(onClick: () -> Unit, modifier: Modifier = Modifier) {
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(6.dp)
     ) {
-        Text("PDF", fontSize = 14.sp, fontWeight = FontWeight.ExtraBold, color = GRojoTexto)
-        Text("Exportar", fontSize = 14.sp, fontWeight = FontWeight.SemiBold, color = GTexto)
+        Text("PDF", fontSize = 14.sp, fontWeight = FontWeight.ExtraBold, color = Peligro)
+        Text("Exportar", fontSize = 14.sp, fontWeight = FontWeight.SemiBold, color = TextoPrincipal)
     }
 }
 
@@ -96,9 +86,10 @@ internal fun exportarStockPdf(
             stockPorSucursal(p, stocks, tiendas).map { "$it" }
     }
     val pesos = listOf(4f, 1f, 1f) + tiendas.map { 1.4f }
-    val archivo = ReportePdf.generar(
-        contexto, "stock_global", "Stock global", "${productos.size} productos · ${tiendas.size} sucursales",
-        encabezados, filas, pesos
-    )
-    ReportePdf.compartir(contexto, archivo)
+    ReportePdf.exportar(contexto) {
+        ReportePdf.generar(
+            contexto, "stock_global", "Stock global", "${productos.size} productos · ${tiendas.size} sucursales",
+            encabezados, filas, pesos
+        )
+    }
 }

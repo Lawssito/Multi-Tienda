@@ -5,8 +5,6 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
-import androidx.compose.foundation.rememberScrollState
-import kotlinx.coroutines.launch
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -19,6 +17,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material.icons.Icons
@@ -42,14 +41,14 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.bexai.multitienda.ui.components.PastillaSucursal
 import com.bexai.multitienda.ui.theme.Azul
-import com.bexai.multitienda.viewmodel.EncargadoViewModel
+import com.bexai.multitienda.ui.theme.FondoPantalla
+import com.bexai.multitienda.ui.theme.Peligro
+import com.bexai.multitienda.ui.theme.Rojo
+import com.bexai.multitienda.ui.theme.TextoPrincipal
+import com.bexai.multitienda.ui.theme.TextoSecundario
+import com.bexai.multitienda.viewmodel.encargado.EncargadoViewModel
+import kotlinx.coroutines.launch
 
-// Colores del mockup v6 (Stock.dc.html)
-private val FondoPantalla = Color(0xFFF4F6FA)
-private val Texto = Color(0xFF0F172A)
-private val TextoSuave = Color(0xFF5B6474)
-private val Rojo = Color(0xFFDC2626)
-private val RojoTexto = Color(0xFFB91C1C)
 private val Pista = Color(0xFFE9EDF3)
 
 /**
@@ -92,10 +91,10 @@ fun EncargadoHomeView(
             verticalAlignment = Alignment.CenterVertically
         ) {
             PastillaSucursal(nombreSucursal, onClick = onCambiarSucursal)
-            Text("Encargado", fontSize = 15.sp, color = TextoSuave)
+            Text("Encargado", fontSize = 15.sp, color = TextoSecundario)
         }
 
-        Text("Stock", fontSize = 32.sp, fontWeight = FontWeight.ExtraBold, color = Texto)
+        Text("Stock", fontSize = 32.sp, fontWeight = FontWeight.ExtraBold, color = TextoPrincipal)
 
         // Buscador
         Row(
@@ -108,14 +107,14 @@ fun EncargadoHomeView(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(10.dp)
         ) {
-            Icon(Icons.Outlined.Search, contentDescription = null, tint = TextoSuave, modifier = Modifier.size(20.dp))
+            Icon(Icons.Outlined.Search, contentDescription = null, tint = TextoSecundario, modifier = Modifier.size(20.dp))
             Box(modifier = Modifier.weight(1f)) {
-                if (query.isEmpty()) Text("Buscar producto o código", fontSize = 15.sp, color = TextoSuave)
+                if (query.isEmpty()) Text("Buscar producto o código", fontSize = 15.sp, color = TextoSecundario)
                 BasicTextField(
                     value = query,
                     onValueChange = viewModel::onQueryChange,
                     singleLine = true,
-                    textStyle = TextStyle(fontSize = 15.sp, color = Texto),
+                    textStyle = TextStyle(fontSize = 15.sp, color = TextoPrincipal),
                     modifier = Modifier.fillMaxWidth()
                 )
             }
@@ -141,7 +140,7 @@ fun EncargadoHomeView(
         }
 
         if (productos.isEmpty()) {
-            Text("No hay productos que coincidan", fontSize = 15.sp, color = TextoSuave)
+            Text("No hay productos que coincidan", fontSize = 15.sp, color = TextoSecundario)
         }
         LazyColumn(
             modifier = Modifier
@@ -161,8 +160,8 @@ fun EncargadoHomeView(
                     verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                        Text(p.nombre, fontSize = 17.sp, fontWeight = FontWeight.Bold, color = Texto, modifier = Modifier.weight(1f))
-                        Text("${p.stock}", fontSize = 17.sp, fontWeight = FontWeight.Bold, color = if (bajo) Rojo else Texto)
+                        Text(p.nombre, fontSize = 17.sp, fontWeight = FontWeight.Bold, color = TextoPrincipal, modifier = Modifier.weight(1f))
+                        Text("${p.stock}", fontSize = 17.sp, fontWeight = FontWeight.Bold, color = if (bajo) Rojo else TextoPrincipal)
                     }
                     Box(modifier = Modifier.fillMaxWidth().height(8.dp).background(Pista, RoundedCornerShape(4.dp))) {
                         Box(
@@ -177,7 +176,7 @@ fun EncargadoHomeView(
                         else if (bajo) "! Bajo stock · mínimo ${p.stockMinimo}"
                         else "${p.categoria.ifBlank { "Sin categoría" }} · mínimo ${p.stockMinimo}",
                         fontSize = 14.sp,
-                        color = if (bajo) RojoTexto else TextoSuave
+                        color = if (bajo) Peligro else TextoSecundario
                     )
                 }
             }
@@ -208,9 +207,9 @@ private fun Filtro(texto: String, seleccionado: Boolean, onClick: () -> Unit) {
         text = texto,
         fontSize = 15.sp,
         fontWeight = FontWeight.SemiBold,
-        color = if (seleccionado) Color.White else Texto,
+        color = if (seleccionado) Color.White else TextoPrincipal,
         modifier = Modifier
-            .background(if (seleccionado) Texto else Color.White, RoundedCornerShape(24.dp))
+            .background(if (seleccionado) TextoPrincipal else Color.White, RoundedCornerShape(24.dp))
             .border(BorderStroke(1.dp, Color(0xFFE2E8F0)), RoundedCornerShape(24.dp))
             .clickable(onClick = onClick)
             .padding(horizontal = 18.dp, vertical = 12.dp)

@@ -9,8 +9,12 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import com.bexai.multitienda.model.Rol
 import com.bexai.multitienda.ui.theme.MultiTiendaTheme
-import com.bexai.multitienda.ui.view.LoginView
+import com.bexai.multitienda.ui.view.comun.LoginView
 
+/**
+ * AppNavHost: punto de entrada de la navegación. Empieza en Login y, según el rol, entra al
+ * grafo del Operador, del Encargado o de Gerencia (cada uno en su propio archivo).
+ */
 @Composable
 fun AppNavHost(
     modifier: Modifier = Modifier,

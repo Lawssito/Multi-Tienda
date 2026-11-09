@@ -33,7 +33,7 @@ import com.bexai.multitienda.ui.theme.Peligro
 import com.bexai.multitienda.ui.theme.Superficie
 import com.bexai.multitienda.ui.theme.TextoPrincipal
 import com.bexai.multitienda.ui.theme.TextoSecundario
-import com.bexai.multitienda.viewmodel.EncargadoViewModel
+import com.bexai.multitienda.viewmodel.encargado.EncargadoViewModel
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale

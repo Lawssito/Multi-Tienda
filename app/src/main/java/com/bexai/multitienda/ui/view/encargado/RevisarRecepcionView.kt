@@ -32,27 +32,25 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.bexai.multitienda.data.DecisionRecepcion
+import com.bexai.multitienda.data.repository.DecisionRecepcion
 import com.bexai.multitienda.model.LineaRecepcion
 import com.bexai.multitienda.model.RecepcionPendiente
 import com.bexai.multitienda.model.totales
 import com.bexai.multitienda.ui.theme.Azul
+import com.bexai.multitienda.ui.theme.AzulOscuro
+import com.bexai.multitienda.ui.theme.AzulSuave
+import com.bexai.multitienda.ui.theme.Exito
+import com.bexai.multitienda.ui.theme.FondoPantalla
+import com.bexai.multitienda.ui.theme.NaranjaFondo
+import com.bexai.multitienda.ui.theme.NaranjaTexto
+import com.bexai.multitienda.ui.theme.Peligro
+import com.bexai.multitienda.ui.theme.PeligroSuave
+import com.bexai.multitienda.ui.theme.TextoPrincipal
+import com.bexai.multitienda.ui.theme.TextoSecundario
+import com.bexai.multitienda.ui.theme.VerdeFondo
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
-
-// Colores del mockup v6 (RevisarRecepcion.dc.html)
-private val Fondo = Color(0xFFF4F6FA)
-private val Texto = Color(0xFF0F172A)
-private val TextoSuave = Color(0xFF5B6474)
-private val VerdeTexto = Color(0xFF15803D)
-private val VerdeFondo = Color(0xFFE7F7EF)
-private val NaranjaTexto = Color(0xFFB45309)
-private val NaranjaFondo = Color(0xFFFFEBD2)
-private val AzulTexto = Color(0xFF1D4ED8)
-private val AzulFondo = Color(0xFFDBEAFE)
-private val RojoTexto = Color(0xFFB91C1C)
-private val RojoFondo = Color(0xFFFEE2E2)
 
 private fun etiqueta(decision: String) = when (decision) {
     DecisionRecepcion.RECLAMAR -> "Reclamar faltante"
@@ -92,7 +90,7 @@ fun RevisarRecepcionView(
     Column(
         modifier = modifier
             .fillMaxSize()
-            .background(Fondo)
+            .background(FondoPantalla)
             .statusBarsPadding()
             .navigationBarsPadding()
             .padding(horizontal = 20.dp, vertical = 16.dp),
@@ -102,18 +100,18 @@ fun RevisarRecepcionView(
             Box(
                 modifier = Modifier.size(44.dp).background(Color.White, CircleShape).clickable(onClick = onVolver),
                 contentAlignment = Alignment.Center
-            ) { Icon(Icons.AutoMirrored.Outlined.ArrowBack, contentDescription = "Volver", tint = Texto) }
+            ) { Icon(Icons.AutoMirrored.Outlined.ArrowBack, contentDescription = "Volver", tint = TextoPrincipal) }
             Column {
-                Text("Recepción ${recepcion?.codigo ?: ""}", fontSize = 22.sp, fontWeight = FontWeight.ExtraBold, color = Texto)
-                Text("${recepcion?.proveedor ?: ""} · enviada $hora", fontSize = 14.sp, color = TextoSuave)
+                Text("Recepción ${recepcion?.codigo ?: ""}", fontSize = 22.sp, fontWeight = FontWeight.ExtraBold, color = TextoPrincipal)
+                Text("${recepcion?.proveedor ?: ""} · enviada $hora", fontSize = 14.sp, color = TextoSecundario)
             }
         }
 
         FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            Etiqueta("${t.entran} ingresadas", VerdeTexto, VerdeFondo)
+            Etiqueta("${t.entran} ingresadas", Exito, VerdeFondo)
             Etiqueta("Faltan ${t.faltan}", NaranjaTexto, NaranjaFondo)
-            Etiqueta("Sobra ${t.sobran}", AzulTexto, AzulFondo)
-            Etiqueta("Dañados ${t.danadas}", RojoTexto, RojoFondo)
+            Etiqueta("Sobra ${t.sobran}", AzulOscuro, AzulSuave)
+            Etiqueta("Dañados ${t.danadas}", Peligro, PeligroSuave)
         }
 
         Column(
@@ -121,7 +119,7 @@ fun RevisarRecepcionView(
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             if (conProblema.isEmpty()) {
-                Text("Llegó todo completo y en buen estado. No hay nada que decidir.", fontSize = 15.sp, color = TextoSuave)
+                Text("Llegó todo completo y en buen estado. No hay nada que decidir.", fontSize = 15.sp, color = TextoSecundario)
             }
             conProblema.forEach { linea ->
                 TarjetaRevision(linea, onDecidir = { onDecidir(linea.detalleId, it) })
@@ -160,30 +158,30 @@ private fun TarjetaRevision(linea: LineaRecepcion, onDecidir: (String) -> Unit) 
         verticalArrangement = Arrangement.spacedBy(10.dp)
     ) {
         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-            Text(linea.nombre, fontSize = 18.sp, fontWeight = FontWeight.Bold, color = Texto, modifier = Modifier.weight(1f))
+            Text(linea.nombre, fontSize = 18.sp, fontWeight = FontWeight.Bold, color = TextoPrincipal, modifier = Modifier.weight(1f))
             Column(horizontalAlignment = Alignment.End, verticalArrangement = Arrangement.spacedBy(4.dp)) {
                 if (linea.faltan > 0) Etiqueta("▼ -${linea.faltan}", NaranjaTexto, NaranjaFondo)
-                if (linea.sobran > 0) Etiqueta("▲ +${linea.sobran}", AzulTexto, AzulFondo)
-                if (linea.danado > 0) Etiqueta("! ${linea.danado} dañados", RojoTexto, RojoFondo)
+                if (linea.sobran > 0) Etiqueta("▲ +${linea.sobran}", AzulOscuro, AzulSuave)
+                if (linea.danado > 0) Etiqueta("! ${linea.danado} dañados", Peligro, PeligroSuave)
             }
         }
         if (linea.faltan > 0 || linea.sobran > 0) {
-            Text("Recibido ${linea.recibido} · esperado ${linea.esperado}", fontSize = 14.sp, color = TextoSuave)
+            Text("Recibido ${linea.recibido} · esperado ${linea.esperado}", fontSize = 14.sp, color = TextoSecundario)
         }
         if (linea.danado > 0) {
-            Text("Motivo: ${linea.motivoDanado.orEmpty().lowercase()} · retenidos, no suman stock", fontSize = 14.sp, color = TextoSuave)
-            if (!linea.nota.isNullOrBlank()) Text("\"${linea.nota}\"", fontSize = 14.sp, color = TextoSuave)
+            Text("Motivo: ${linea.motivoDanado.orEmpty().lowercase()} · retenidos, no suman stock", fontSize = 14.sp, color = TextoSecundario)
+            if (!linea.nota.isNullOrBlank()) Text("\"${linea.nota}\"", fontSize = 14.sp, color = TextoSecundario)
         }
         FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             opciones(linea).forEach { opcion ->
                 val elegida = linea.decision == opcion
                 Text(
                     text = etiqueta(opcion),
-                    color = if (elegida) Color.White else Texto,
+                    color = if (elegida) Color.White else TextoPrincipal,
                     fontSize = 15.sp,
                     fontWeight = FontWeight.SemiBold,
                     modifier = Modifier
-                        .background(if (elegida) Texto else Color.White, RoundedCornerShape(24.dp))
+                        .background(if (elegida) TextoPrincipal else Color.White, RoundedCornerShape(24.dp))
                         .border(BorderStroke(1.dp, Color(0xFFE2E8F0)), RoundedCornerShape(24.dp))
                         .clickable { onDecidir(opcion) }
                         .padding(horizontal = 18.dp, vertical = 12.dp)
