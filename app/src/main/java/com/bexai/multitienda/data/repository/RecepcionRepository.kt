@@ -152,6 +152,7 @@ class RecepcionRepository(private val db: AppDatabase) {
     /**
      * Guarda lo que decidió el encargado para una línea. LIBERAR suma al stock las unidades
      * dañadas (con su Entrada); si luego elige otra cosa, se deshace con una Salida.
+     * DEVOLVER en un sobrante saca esas unidades con una Salida; si cambia, se deshace con una Entrada.
      */
     suspend fun decidir(detalleId: Int, decision: String) = db.withTransaction {
         val detalle = dao.buscarDetallePorId(detalleId) ?: return@withTransaction
@@ -172,6 +173,23 @@ class RecepcionRepository(private val db: AppDatabase) {
                 )
             )
             existencias.sumar(detalle.productoId, recepcion.sucursalId, if (liberara) detalle.danado else -detalle.danado)
+        }
+        // Sobrante (sin dañados): ya entró al stock al enviar; DEVOLVER lo saca con una Salida.
+        val sobran = (detalle.recibido - detalle.esperado).coerceAtLeast(0)
+        val devolvia = detalle.decision == DecisionRecepcion.DEVOLVER
+        val devolvera = decision == DecisionRecepcion.DEVOLVER
+        if (detalle.danado == 0 && sobran > 0 && devolvia != devolvera) {
+            movimientoDao.insertar(
+                Movimiento(
+                    productoId = detalle.productoId,
+                    sucursalId = recepcion.sucursalId,
+                    tipo = if (devolvera) TipoMovimiento.SALIDA else TipoMovimiento.ENTRADA,
+                    cantidad = sobran,
+                    motivo = if (devolvera) "Sobrante devuelto · $codigo" else "Devolución deshecha · $codigo",
+                    fechaHora = System.currentTimeMillis()
+                )
+            )
+            existencias.sumar(detalle.productoId, recepcion.sucursalId, if (devolvera) -sobran else sobran)
         }
         dao.guardarDecision(detalleId, decision)
     }

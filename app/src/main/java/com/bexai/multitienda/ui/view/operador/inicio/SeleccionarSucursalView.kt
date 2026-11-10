@@ -16,11 +16,9 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.outlined.ArrowBack
 import androidx.compose.material.icons.outlined.Lock
 import androidx.compose.material.icons.outlined.Search
 import androidx.compose.material.icons.outlined.Storefront
@@ -59,14 +57,12 @@ private val ColoresIcono = listOf(
 /**
  * Pantalla donde el operador elige la sucursal en la que va a trabajar (mockup "Elegir sucursal").
  * Las sucursales inactivas salen apagadas con un candado y no se pueden elegir.
- * [onVolver] es null cuando no hay pantalla anterior (primer ingreso): ahí no se muestra la flecha.
  */
 @Composable
 fun SeleccionarSucursalView(
     sucursales: List<Sucursal>,
     sucursalActualId: Int?,
     onElegir: (Sucursal) -> Unit,
-    onVolver: (() -> Unit)?,
     modifier: Modifier = Modifier
 ) {
     var busqueda by rememberSaveable { mutableStateOf("") }
@@ -80,28 +76,13 @@ fun SeleccionarSucursalView(
             .padding(horizontal = 20.dp, vertical = 16.dp),
         verticalArrangement = Arrangement.spacedBy(18.dp)
     ) {
-        // Barra superior: volver, título y avatar
+        // Barra superior: solo el título, centrado
         Row(
             modifier = Modifier.fillMaxWidth(),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.SpaceBetween
         ) {
-            if (onVolver != null) {
-                Box(
-                    modifier = Modifier
-                        .size(40.dp)
-                        .background(Color.White, CircleShape)
-                        .clickable(onClick = onVolver),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Icon(
-                        Icons.AutoMirrored.Outlined.ArrowBack, contentDescription = "Volver",
-                        tint = TextoPrincipal, modifier = Modifier.size(18.dp)
-                    )
-                }
-            } else {
-                Box(Modifier.size(40.dp))
-            }
+            Box(Modifier.size(40.dp))
             Text("Elegir sucursal", fontSize = 18.sp, fontWeight = FontWeight.SemiBold, color = TextoPrincipal)
             Box(Modifier.size(40.dp))
         }

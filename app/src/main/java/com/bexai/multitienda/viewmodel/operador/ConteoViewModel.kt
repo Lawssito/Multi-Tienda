@@ -65,18 +65,22 @@ class ConteoViewModel(app: Application) : AndroidViewModel(app) {
     private val horaInicio = MutableStateFlow("")
 
     init {
-        // Retoma el conteo en curso de la sucursal; si no hay, crea uno nuevo
+        // Retoma el conteo en curso de la sucursal; si no hay, crea uno nuevo.
+        // Si el conteo en curso no tiene ningún producto contado (por ejemplo, se abrió por error),
+        // se descarta y se crea otro, para no trabajar con un stock congelado antiguo.
         viewModelScope.launch(errores) {
             val existente = dao.enCurso(sucursalId)
+            val vacio = existente != null && dao.lineasContadas(existente.id).isEmpty()
             val id: Int
             val inicio: Long
-            if (existente != null) {
+            if (existente != null && !vacio) {
                 id = existente.id
                 inicio = existente.fechaInicio
             } else {
                 inicio = System.currentTimeMillis()
                 // Crea el conteo y congela el stock de todos los productos, todo o nada
                 id = db.withTransaction {
+                    if (existente != null) dao.eliminar(existente.id)
                     val nuevo = dao.insertar(Conteo(sucursalId = sucursalId, fechaInicio = inicio)).toInt()
                     dao.congelarStock(nuevo, sucursalId)
                     nuevo

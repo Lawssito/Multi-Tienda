@@ -2,12 +2,12 @@
 
 Aplicación Android para controlar el inventario de una cadena con varias sucursales y una bodega. Cada persona entra con su rol (Operador, Encargado o Gerencia) y ve solo las pantallas de su trabajo: el operador mueve y cuenta el stock con la cámara, el encargado revisa lo que ocurre en su sucursal y la gerencia supervisa toda la red.
 
-Proyecto de la asignatura **DSY1105 Desarrollo de Aplicaciones Móviles** (Duoc UC).
+Proyecto de la asignatura **Desarrollo de Aplicaciones Móviles** (Duoc UC).
 
 ## Integrantes
 
 - Andrés Cereño
-- Diego Bastián Rivera Huenten
+- Diego Rivera
 
 ## Problema que resuelve
 
