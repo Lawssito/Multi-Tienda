@@ -23,6 +23,10 @@ interface ConteoDao {
     @Query("SELECT * FROM Conteo WHERE sucursalId = :sucursalId AND estado = 'EN_CURSO' LIMIT 1")
     suspend fun enCurso(sucursalId: Int): Conteo?
 
+    // Borra un conteo; sus líneas (ConteoDetalle) se borran solas por el CASCADE
+    @Query("DELETE FROM Conteo WHERE id = :id")
+    suspend fun eliminar(id: Int)
+
     @Query("SELECT * FROM ConteoDetalle WHERE conteoId = :conteoId AND productoId = :productoId LIMIT 1")
     suspend fun buscarDetalle(conteoId: Int, productoId: Int): ConteoDetalle?
 

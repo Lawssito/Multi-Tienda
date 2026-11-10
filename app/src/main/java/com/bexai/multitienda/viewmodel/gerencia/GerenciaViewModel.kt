@@ -233,6 +233,7 @@ class GerenciaViewModel(app: Application) : AndroidViewModel(app) {
         }
         val direccionError = when {
             direccion.length < 5 -> "La dirección debe tener al menos 5 caracteres"
+            direccion.length > 100 -> "La dirección no puede superar los 100 caracteres"
             else -> null
         }
         _formTienda.update { it.copy(nombreError = nombreError, direccionError = direccionError) }

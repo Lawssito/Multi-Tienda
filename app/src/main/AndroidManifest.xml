@@ -9,15 +9,15 @@
         android:allowBackup="true"
         android:dataExtractionRules="@xml/data_extraction_rules"
         android:fullBackupContent="@xml/backup_rules"
-        android:icon="@mipmap/ic_launcher"
-        android:label="@string/app_name"
-        android:roundIcon="@mipmap/ic_launcher_round"
+        android:icon="@mipmap/stockmulti_launcher"
+        android:label="StockMulti"
+        android:roundIcon="@mipmap/stockmulti_launcher_round"
         android:supportsRtl="true"
         android:theme="@style/Theme.MultiTienda">
         <activity
             android:name=".MainActivity"
             android:exported="true"
-            android:label="@string/app_name"
+            android:label="StockMulti"
             android:theme="@style/Theme.MultiTienda"
             android:windowSoftInputMode="adjustResize">
             <intent-filter>
@@ -39,4 +39,4 @@
         </provider>
     </application>
 
-</manifest>
+</manifest>

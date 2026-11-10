@@ -46,7 +46,7 @@ import com.bexai.multitienda.ui.theme.TextoSecundario
 
 private const val MINIMO_DIGITOS = 8
 private const val MAXIMO_DIGITOS = 13
-private const val MAXIMO_CAJA = 20
+private const val MAXIMO_CAJA = 16
 
 /**
  * Hoja para escribir un código de barras a mano.

@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.rememberScrollState
@@ -160,7 +161,9 @@ fun GerenciaPanelView(
                 Text("Stock por ubicación", fontSize = 19.sp, fontWeight = FontWeight.ExtraBold, color = TextoPrincipal)
                 Text(
                     "Administrar tiendas", fontSize = 15.sp, fontWeight = FontWeight.Bold, color = Azul,
-                    modifier = Modifier.clickable { navController.navigate(Ruta.GerenciaGestionTiendas.ruta) }
+                    modifier = Modifier
+                        .offset(x = 8.dp)
+                        .clickable { navController.navigate(Ruta.GerenciaGestionTiendas.ruta) }
                 )
             }
             if (ubicaciones.isEmpty()) Text("Sin sucursales.", fontSize = 15.sp, color = TextoSecundario)

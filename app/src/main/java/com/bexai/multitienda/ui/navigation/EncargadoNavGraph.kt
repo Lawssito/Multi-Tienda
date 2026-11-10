@@ -39,9 +39,6 @@ fun NavGraphBuilder.encargadoNavGraph(navController: NavHostController) {
             SeleccionarSucursalView(
                 sucursales = sucursales,
                 sucursalActualId = actual.id,
-                onVolver = if (navController.previousBackStackEntry != null) {
-                    { navController.popBackStack() }
-                } else null,
                 onElegir = { sucursal ->
                     viewModel.elegir(sucursal)
                     navController.navigate(Ruta.EncargadoInicio.ruta) {
