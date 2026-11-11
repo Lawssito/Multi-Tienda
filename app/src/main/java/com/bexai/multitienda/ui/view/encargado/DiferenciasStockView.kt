@@ -16,6 +16,18 @@ import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
+// ---------- Material 3 en esta pantalla (todo viene de androidx.compose.material3) ----------
+// Button            -> botón "Declarar reposición" (TarjetaDiferencia)
+// ButtonDefaults    -> configura los colores del Button (no es un componente visible)
+// FilterChip        -> filtros "Todas / Faltantes / Sobrantes"
+// FilterChipDefaults-> configura los colores del FilterChip (no es un componente visible)
+// SnackbarHost      -> lugar donde aparece el aviso inferior (Snackbar)
+// SnackbarHostState -> estado que controla cuándo se muestra el Snackbar
+// Text              -> todos los textos de la pantalla
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.FilterChip
+import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
@@ -69,6 +81,7 @@ fun DiferenciasStockView(
     val sucursales by viewModel.sucursales.collectAsState()
     val sucursalId by viewModel.sucursalSeleccionadaId.collectAsState()
 
+    // MATERIAL 3 · SnackbarHostState: guarda y muestra el aviso inferior (Snackbar)
     val snackbar = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
     var filtro by remember { mutableStateOf("Todas") }
@@ -110,17 +123,19 @@ fun DiferenciasStockView(
             item {
                 Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                     listOf("Todas", "Faltantes", "Sobrantes").forEach { nombre ->
-                        val elegido = filtro == nombre
-                        Text(
-                            text = nombre,
-                            fontSize = 15.sp,
-                            fontWeight = FontWeight.SemiBold,
-                            color = if (elegido) Color.White else TextoPrincipal,
-                            modifier = Modifier
-                                .background(if (elegido) TextoPrincipal else Color.White, RoundedCornerShape(24.dp))
-                                .border(BorderStroke(1.dp, Color(0xFFE2E8F0)), RoundedCornerShape(24.dp))
-                                .clickable { filtro = nombre }
-                                .padding(horizontal = 18.dp, vertical = 12.dp)
+                        // MATERIAL 3 · FilterChip: chip de filtro. "selected" indica si está elegido
+                        // y Material 3 cambia solo su apariencia; FilterChipDefaults pone nuestros colores.
+                        FilterChip(
+                            selected = filtro == nombre,
+                            onClick = { filtro = nombre },
+                            label = { Text(nombre, fontSize = 15.sp, fontWeight = FontWeight.SemiBold) },
+                            shape = RoundedCornerShape(24.dp),
+                            colors = FilterChipDefaults.filterChipColors(
+                                containerColor = Color.White,
+                                labelColor = TextoPrincipal,
+                                selectedContainerColor = TextoPrincipal,
+                                selectedLabelColor = Color.White
+                            )
                         )
                     }
                 }
@@ -137,6 +152,7 @@ fun DiferenciasStockView(
                 TarjetaDiferencia(d, onReponer = { reponer = d })
             }
         }
+        // MATERIAL 3 · SnackbarHost: muestra el Snackbar abajo de la pantalla
         SnackbarHost(snackbar, modifier = Modifier.align(Alignment.BottomCenter).padding(16.dp))
     }
 
@@ -193,10 +209,14 @@ private fun TarjetaDiferencia(d: DiferenciaStock, onReponer: () -> Unit) {
             Dato("Mínimo", "${d.minimo}", if (d.contado < d.minimo) Peligro else TextoPrincipal, Modifier.weight(1f))
         }
         if (falta) {
-            Box(
-                modifier = Modifier.fillMaxWidth().height(48.dp).background(Azul, RoundedCornerShape(24.dp)).clickable(onClick = onReponer),
-                contentAlignment = Alignment.Center
-            ) { Text("Declarar reposición", color = Color.White, fontSize = 16.sp, fontWeight = FontWeight.Bold) }
+            // MATERIAL 3 · Button: botón con efecto al tocar y accesible;
+            // ButtonDefaults.buttonColors le pone el azul de la app.
+            Button(
+                onClick = onReponer,
+                modifier = Modifier.fillMaxWidth().height(48.dp),
+                shape = RoundedCornerShape(24.dp),
+                colors = ButtonDefaults.buttonColors(containerColor = Azul, contentColor = Color.White)
+            ) { Text("Declarar reposición", fontSize = 16.sp, fontWeight = FontWeight.Bold) }
         }
     }
 }
