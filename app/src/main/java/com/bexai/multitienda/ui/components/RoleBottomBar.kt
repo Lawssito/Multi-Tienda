@@ -20,6 +20,8 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Home
 import androidx.compose.material.icons.outlined.Person
 import androidx.compose.material.icons.outlined.QrCodeScanner
+import androidx.compose.material3.Badge
+import androidx.compose.material3.BadgedBox
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -122,19 +124,15 @@ private fun ItemBarra(
                 ),
             contentAlignment = Alignment.Center
         ) {
-            Icon(item.icono, contentDescription = null, tint = color)
-            if (item.badge > 0) {
-                Text(
-                    text = if (item.badge > 9) "9+" else "${item.badge}",
-                    color = Color.White,
-                    fontSize = 10.sp,
-                    fontWeight = FontWeight.Bold,
-                    modifier = Modifier
-                        .align(Alignment.TopEnd)
-                        .offset(x = (-6).dp, y = (-2).dp)
-                        .background(Color(0xFFDC2626), RoundedCornerShape(8.dp))
-                        .padding(horizontal = 5.dp, vertical = 1.dp)
-                )
+            // BadgedBox + Badge de Material 3: el contador rojo de alertas
+            BadgedBox(
+                badge = {
+                    if (item.badge > 0) {
+                        Badge { Text(if (item.badge > 9) "9+" else "${item.badge}") }
+                    }
+                }
+            ) {
+                Icon(item.icono, contentDescription = null, tint = color)
             }
         }
         Text(
